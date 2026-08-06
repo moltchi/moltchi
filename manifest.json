@@ -1,0 +1,17 @@
+{
+  "name": "Moltchi",
+  "short_name": "Moltchi",
+  "description": "Un compagnon. Un monde partagé. Simulateur RPG d'animal virtuel.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0819",
+  "theme_color": "#150c26",
+  "lang": "fr",
+  "icons": [
+    { "src": "media/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "media/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "media/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
