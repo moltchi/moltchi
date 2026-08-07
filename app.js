@@ -717,6 +717,7 @@ const ITEM_DB = [
   {id:'coeur_de_pierre',    name:'Cœur de Pierre Ancien',      name_en:'Ancient Stone Heart',     rarity:'legendary', stat:'stamina', value:500, minFloor:30},
   {id:'ombre_eternelle',    name:'Ombre Éternelle',            name_en:'Eternal Shadow',          rarity:'legendary', stat:'dodge',   value:500, minFloor:30},
   {id:'oeil_du_wyrm',       name:'Œil du Wyrm',                name_en:'Eye of the Wyrm',         rarity:'legendary', stat:'magic',   value:500, minFloor:30},
+  {id:'sceptre_wyrm_ancien',name:'Sceptre du Wyrm Ancien',      name_en:'Scepter of the Ancient Wyrm', rarity:'legendary', stat:'crit', value:500, stat2:'magic', value2:167, minFloor:30},
 ];
 
 // Objets exclusifs au Sanctuaire Corrompu (second donjon, débloqué à l'étage 100+).
@@ -744,6 +745,8 @@ const CORRUPT_ITEM_DB = [
   {id:'couronne_fletrie',   name:'Couronne Flétrie',            name_en:'Withered Crown',       rarity:'legendary', stat:'crit',    value:2000, stat2:'magic',   value2:650, minFloor:1},
   {id:'coeur_corrompu',     name:'Cœur Corrompu',               name_en:'Corrupted Heart',      rarity:'legendary', stat:'stamina', value:2000, stat2:'dodge',   value2:650, minFloor:1},
   {id:'oeil_du_neant',      name:'Œil du Néant',                name_en:'Eye of the Void',      rarity:'legendary', stat:'magic',   value:2000, stat2:'crit',    value2:650, minFloor:1},
+  {id:'couronne_du_vide',   name:'Couronne du Vide',            name_en:'Crown of the Void',    rarity:'legendary', stat:'dodge',   value:2000, minFloor:1},
+  {id:'griffe_corrompue',   name:'Griffe Corrompue',            name_en:'Corrupted Claw',       rarity:'legendary', stat:'crit',    value:2000, stat2:'dodge',   value2:650, minFloor:1},
 ];
 
 // Moltyx — objets UNIQUES, au-delà du légendaire. Un seul exemplaire par joueur,
