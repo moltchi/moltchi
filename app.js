@@ -713,11 +713,11 @@ const ITEM_DB = [
   {id:'plaque_antique',     name:'Plaque d\'Endurance Antique',name_en:'Ancient Endurance Plate', rarity:'epic',      stat:'stamina', value:150, minFloor:15},
   {id:'voile_derobade',     name:'Voile de Dérobade',          name_en:'Veil of Evasion',         rarity:'epic',      stat:'dodge',   value:150, minFloor:15},
   {id:'coeur_arcanique',    name:'Cœur Arcanique',             name_en:'Arcane Heart',            rarity:'epic',      stat:'magic',   value:150, minFloor:15},
-  {id:'couronne_cendres',   name:'Couronne de Cendres',        name_en:'Crown of Ashes',          rarity:'legendary', stat:'crit',    value:500, minFloor:30},
-  {id:'coeur_de_pierre',    name:'Cœur de Pierre Ancien',      name_en:'Ancient Stone Heart',     rarity:'legendary', stat:'stamina', value:500, minFloor:30},
-  {id:'ombre_eternelle',    name:'Ombre Éternelle',            name_en:'Eternal Shadow',          rarity:'legendary', stat:'dodge',   value:500, minFloor:30},
-  {id:'oeil_du_wyrm',       name:'Œil du Wyrm',                name_en:'Eye of the Wyrm',         rarity:'legendary', stat:'magic',   value:500, minFloor:30},
-  {id:'sceptre_wyrm_ancien',name:'Sceptre du Wyrm Ancien',      name_en:'Scepter of the Ancient Wyrm', rarity:'legendary', stat:'crit', value:500, stat2:'magic', value2:167, minFloor:30},
+  {id:'couronne_cendres',   name:'Couronne de Cendres',        name_en:'Crown of Ashes',          rarity:'legendary', stat:'crit',    value:280, minFloor:30},
+  {id:'coeur_de_pierre',    name:'Cœur de Pierre Ancien',      name_en:'Ancient Stone Heart',     rarity:'legendary', stat:'stamina', value:280, minFloor:30},
+  {id:'ombre_eternelle',    name:'Ombre Éternelle',            name_en:'Eternal Shadow',          rarity:'legendary', stat:'dodge',   value:280, minFloor:30},
+  {id:'oeil_du_wyrm',       name:'Œil du Wyrm',                name_en:'Eye of the Wyrm',         rarity:'legendary', stat:'magic',   value:280, minFloor:30},
+  {id:'sceptre_wyrm_ancien',name:'Sceptre du Wyrm Ancien',      name_en:'Scepter of the Ancient Wyrm', rarity:'legendary', stat:'crit', value:375, stat2:'magic', value2:125, minFloor:30},
 ];
 
 // Objets exclusifs au Sanctuaire Corrompu (second donjon, débloqué à l'étage 100+).
