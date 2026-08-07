@@ -917,18 +917,18 @@ function weekKey(){
 // ============================================================
 // ---------- Pass Saisonnier ----------
 const BP_DAILY_QUESTS = [
-  {id:'care',     label:'Soigne ton Moltchi 3 fois (nourrir / jouer / reposer)', target:3,  points:15},
-  {id:'train',    label:'Réalise 3 entraînements',                              target:3,  points:15},
-  {id:'dungeon',  label:'Tente 2 étages du Donjon',                             target:2,  points:20},
-  {id:'boss',     label:'Attaque le Boss Mondial 1 fois',                       target:1,  points:15},
-  {id:'treasure', label:'Fais 1 fouille de trésor',                            target:1,  points:10},
+  {id:'care',     label:'Soigne ton Moltchi 3 fois (nourrir / jouer / reposer)', label_en:'Care for your Moltchi 3 times (feed / play / rest)',      target:3,  points:15},
+  {id:'train',    label:'Réalise 3 entraînements',                              label_en:'Complete 3 training sessions',                            target:3,  points:15},
+  {id:'dungeon',  label:'Tente 2 étages du Donjon',                             label_en:'Attempt 2 Dungeon floors',                                target:2,  points:20},
+  {id:'boss',     label:'Attaque le Boss Mondial 1 fois',                       label_en:'Attack the World Boss 1 time',                            target:1,  points:15},
+  {id:'treasure', label:'Fais 1 fouille de trésor',                            label_en:'Do 1 treasure search',                                    target:1,  points:10},
 ];
 const BP_WEEKLY_QUESTS = [
-  {id:'care',     label:'Soigne ton Moltchi 15 fois',        target:15, points:60},
-  {id:'train',    label:'Réalise 20 entraînements',          target:20, points:60},
-  {id:'dungeon',  label:'Tente 20 étages du Donjon',         target:20, points:80},
-  {id:'boss',     label:'Attaque le Boss Mondial 10 fois',   target:10, points:80},
-  {id:'treasure', label:'Fais 50 fouilles de trésor',        target:50, points:50},
+  {id:'care',     label:'Soigne ton Moltchi 15 fois',        label_en:'Care for your Moltchi 15 times',    target:15, points:60},
+  {id:'train',    label:'Réalise 20 entraînements',          label_en:'Complete 20 training sessions',     target:20, points:60},
+  {id:'dungeon',  label:'Tente 20 étages du Donjon',         label_en:'Attempt 20 Dungeon floors',         target:20, points:80},
+  {id:'boss',     label:'Attaque le Boss Mondial 10 fois',   label_en:'Attack the World Boss 10 times',    target:10, points:80},
+  {id:'treasure', label:'Fais 50 fouilles de trésor',        label_en:'Do 50 treasure searches',           target:50, points:50},
 ];
 // 20 paliers — récompense gratuite ET récompense premium à chaque palier.
 // Les objets référencent la base ITEM_DB existante (aucun objet n'est inventé à la volée).
@@ -1140,11 +1140,13 @@ function renderBattlepass(c){
   // Quêtes
   function renderQuestList(listEl, quests, progress, completed){
     listEl.innerHTML = '';
+    const doneLabel = currentLang === 'en' ? 'Completed' : 'Terminée';
     quests.forEach(q=>{
       const done = completed.includes(q.id);
       const cur = Math.min(q.target, progress[q.id]||0);
+      const label = currentLang === 'en' ? (q.label_en || q.label) : q.label;
       const li = document.createElement('li');
-      li.innerHTML = `<div class="bp-quest-row"><span class="bp-quest-label${done?' bp-quest-done':''}">${done?'✓ ':''}${q.label}</span><span class="bp-quest-pts">${done?'Terminée':`${cur}/${q.target}`} · +${q.points} pts</span></div>
+      li.innerHTML = `<div class="bp-quest-row"><span class="bp-quest-label${done?' bp-quest-done':''}">${done?'✓ ':''}${label}</span><span class="bp-quest-pts">${done?doneLabel:`${cur}/${q.target}`} · +${q.points} pts</span></div>
         <div class="bar-track"><div class="bar-fill" style="width:${Math.round((cur/q.target)*100)}%;background:${done?'#4ea88a':'var(--gold)'};"></div></div>`;
       listEl.appendChild(li);
     });
