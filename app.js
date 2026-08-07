@@ -2487,14 +2487,15 @@ function eventPosInEl(evt, el){
 function startReflex(c){
   $('minigame-area').style.display = 'block';
   setMinigameTheme('fire');
-  $('minigame-title').textContent = '⚡ Réflexe — clique dès que la zone devient verte';
+  $('minigame-title').textContent = currentLang==='en' ? '⚡ Reflex — click as soon as the zone turns green' : '⚡ Réflexe — clique dès que la zone devient verte';
+  const statLabel = currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL;
   runMinigameCountdown(() => {
-  $('minigame-content').innerHTML = '<div class="reflex-zone wait" id="reflex-zone">Attends…</div>';
+  $('minigame-content').innerHTML = `<div class="reflex-zone wait" id="reflex-zone">${currentLang==='en' ? 'Wait…' : 'Attends…'}</div>`;
   const zone = $('reflex-zone');
   let goTime = null, timeout = null, done = false;
   const delay = 800 + Math.random()*2200;
   timeout = setTimeout(()=>{
-    goTime = Date.now(); zone.classList.remove('wait'); zone.classList.add('go'); zone.textContent = 'CLIQUE !';
+    goTime = Date.now(); zone.classList.remove('wait'); zone.classList.add('go'); zone.textContent = currentLang==='en' ? 'CLICK!' : 'CLIQUE !';
     spawnImpactFlash(zone, zone.clientWidth/2, zone.clientHeight/2, '#3ecf6e');
   }, delay);
   zone.onclick = async (evt) => {
@@ -2502,14 +2503,14 @@ function startReflex(c){
     const {x, y} = eventPosInEl(evt, zone);
     if(goTime === null){
       done = true; clearTimeout(timeout);
-      zone.textContent = 'Trop tôt ! Réessaie.'; zone.classList.remove('go');
+      zone.textContent = currentLang==='en' ? 'Too early! Try again.' : 'Trop tôt ! Réessaie.'; zone.classList.remove('go');
       shakeElement(zone);
       spawnParticleBurst(zone, x, y, 'var(--ivory-dim)', 6);
       try{
         const data = await performAction('train_reflex', { tooEarly: true });
         creature = mergeDefaults(data.creature);
         renderCreature(creature);
-      } catch(e){ zone.textContent = 'Erreur — réessaie plus tard.'; console.error(e); }
+      } catch(e){ zone.textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
       return;
     }
     done = true;
@@ -2519,12 +2520,12 @@ function startReflex(c){
     try{
       const data = await performAction('train_reflex', { reactionMs });
       creature = mergeDefaults(data.creature);
-      let msg = `${reactionMs}ms — +${data.gain} Critique (Feu)`;
-      if(data.uniqueFound) msg += ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+      let msg = `${reactionMs}ms — +${data.gain} ${statLabel.crit}`;
+      if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
       zone.textContent = msg; zone.classList.remove('go'); zone.classList.add('mg-fly-up');
       renderCreature(creature);
     } catch(e){
-      zone.textContent = 'Erreur — réessaie plus tard.'; zone.classList.remove('go');
+      zone.textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; zone.classList.remove('go');
       console.error(e);
     }
   };
@@ -2533,9 +2534,10 @@ function startReflex(c){
 function startMemory(c){
   $('minigame-area').style.display = 'block';
   setMinigameTheme('wind');
-  $('minigame-title').textContent = '🧩 Mémoire — reproduis la séquence';
+  $('minigame-title').textContent = currentLang==='en' ? '🧩 Memory — reproduce the sequence' : '🧩 Mémoire — reproduis la séquence';
+  const statLabel = currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL;
   runMinigameCountdown(() => {
-  $('minigame-content').innerHTML = '<div class="memory-grid" id="memory-grid"></div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);margin-top:8px;" id="memory-status">Regarde bien…</div>';
+  $('minigame-content').innerHTML = `<div class="memory-grid" id="memory-grid"></div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);margin-top:8px;" id="memory-status">${currentLang==='en' ? 'Watch closely…' : 'Regarde bien…'}</div>`;
   const grid = $('memory-grid');
   const tiles = [];
   for(let i=0;i<9;i++){ const t = document.createElement('div'); t.className='memory-tile'; t.dataset.i=i; grid.appendChild(t); tiles.push(t); }
@@ -2549,7 +2551,7 @@ function startMemory(c){
       tiles[idx].classList.remove('lit');
       await new Promise(r=>setTimeout(r,180));
     }
-    $('memory-status').textContent = 'À toi — reproduis la séquence';
+    $('memory-status').textContent = currentLang==='en' ? 'Your turn — reproduce the sequence' : 'À toi — reproduis la séquence';
     accepting = true;
   }
   tiles.forEach(t=>{
@@ -2565,12 +2567,12 @@ function startMemory(c){
           try{
             const data = await performAction('train_memory', { success: true, playerIdx });
             creature = mergeDefaults(data.creature);
-            let msg = `Parfait ! +${data.gain} Vitesse (Vent)`;
-            if(data.uniqueFound) msg += ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+            let msg = currentLang==='en' ? `Perfect! +${data.gain} ${statLabel.dodge}` : `Parfait ! +${data.gain} ${statLabel.dodge}`;
+            if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
             $('memory-status').textContent = msg;
             $('memory-status').classList.add('mg-fly-up');
             renderCreature(creature);
-          } catch(e){ $('memory-status').textContent = 'Erreur — réessaie plus tard.'; console.error(e); }
+          } catch(e){ $('memory-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
         }
       } else {
         t.classList.add('wrong'); setTimeout(()=>t.classList.remove('wrong'),300);
@@ -2580,11 +2582,13 @@ function startMemory(c){
         try{
           const data = await performAction('train_memory', { success: false, playerIdx });
           creature = mergeDefaults(data.creature);
-          let msg = `Raté à l'étape ${playerIdx+1} — +${data.gain} Vitesse (Vent) quand même`;
-          if(data.uniqueFound) msg += ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+          let msg = currentLang==='en'
+            ? `Missed at step ${playerIdx+1} — +${data.gain} ${statLabel.dodge} anyway`
+            : `Raté à l'étape ${playerIdx+1} — +${data.gain} ${statLabel.dodge} quand même`;
+          if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
           $('memory-status').textContent = msg;
           renderCreature(creature);
-        } catch(e){ $('memory-status').textContent = 'Erreur — réessaie plus tard.'; console.error(e); }
+        } catch(e){ $('memory-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
       }
     };
   });
@@ -2622,20 +2626,20 @@ function genericBar(c, opts){
       const data = await performAction('train_rhythm', { distFromCenter });
       creature = mergeDefaults(data.creature);
       let msg = `+${data.gain} ${opts.label}`;
-      if(data.uniqueFound) msg += ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+      if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
       $('rhythm-status').textContent = msg;
       $('rhythm-status').classList.add('mg-fly-up');
       renderCreature(creature);
-    } catch(e){ $('rhythm-status').textContent = 'Erreur — réessaie plus tard.'; console.error(e); }
+    } catch(e){ $('rhythm-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
   };
 }
 function startRhythm(c){
   $('minigame-area').style.display = 'block';
   setMinigameTheme('earth');
-  $('minigame-title').textContent = '🎵 Rythme — clique quand le curseur est dans la zone dorée';
+  $('minigame-title').textContent = currentLang==='en' ? '🎵 Rhythm — click when the cursor is in the golden zone' : '🎵 Rythme — clique quand le curseur est dans la zone dorée';
   runMinigameCountdown(() => {
-  $('minigame-content').innerHTML = '<div class="rhythm-track" id="rhythm-track"><div class="rhythm-zone"></div><div class="rhythm-marker" id="rhythm-marker" style="left:0%"></div></div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);" id="rhythm-status">Clique au bon moment…</div>';
-  genericBar(c, {stat:'stamina', game:'rhythm', label:'Endurance (Terre)'});
+  $('minigame-content').innerHTML = `<div class="rhythm-track" id="rhythm-track"><div class="rhythm-zone"></div><div class="rhythm-marker" id="rhythm-marker" style="left:0%"></div></div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);" id="rhythm-status">${currentLang==='en' ? 'Click at the right moment…' : 'Clique au bon moment…'}</div>`;
+  genericBar(c, {stat:'stamina', game:'rhythm', label:(currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL).stamina});
   });
 }
 const ARCANE_RUNES = ['᛭','ᚨ','ᛟ','ᚱ','ᛝ','ᛒ'];
@@ -2645,7 +2649,7 @@ const ARCANE_ROUND_TIME = 1800; // ms
 function startArcane(c){
   $('minigame-area').style.display = 'block';
   setMinigameTheme('water');
-  $('minigame-title').textContent = '🔮 Invocation — clique la rune identique à celle affichée, avant la fin du sablier';
+  $('minigame-title').textContent = currentLang==='en' ? '🔮 Invocation — click the rune matching the one shown, before the timer runs out' : '🔮 Invocation — clique la rune identique à celle affichée, avant la fin du sablier';
   let round = 0, totalScore = 0, roundActive = false, timerRaf, roundStart;
 
   function playRound(){
@@ -2656,7 +2660,7 @@ function startArcane(c){
     const shuffled = Array.from(choices).sort(()=>Math.random()-0.5);
 
     $('arcane-target').textContent = target;
-    $('arcane-status').textContent = `Manche ${round} / ${ARCANE_ROUNDS}`;
+    $('arcane-status').textContent = currentLang==='en' ? `Round ${round} / ${ARCANE_ROUNDS}` : `Manche ${round} / ${ARCANE_ROUNDS}`;
     const grid = $('rune-grid');
     grid.innerHTML = '';
     shuffled.forEach(sym=>{
@@ -2706,11 +2710,18 @@ function startArcane(c){
       try{
         const data = await performAction('train_arcane', { totalScore });
         creature = mergeDefaults(data.creature);
-        const uniqueMsg = data.uniqueFound ? ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !` : '';
-        $('minigame-content').innerHTML = `<div style="font-family:var(--font-mono);font-size:13px;color:var(--ivory-dim);text-align:center;padding:20px 0;">Invocation terminée — <span style="color:var(--violet);">+${data.gain} Magie (Eau)</span>${uniqueMsg}</div>`;
+        const magicLabel = (currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL).magic;
+        const uniqueMsg = data.uniqueFound
+          ? (currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`)
+          : '';
+        $('minigame-content').innerHTML = currentLang==='en'
+          ? `<div style="font-family:var(--font-mono);font-size:13px;color:var(--ivory-dim);text-align:center;padding:20px 0;">Invocation complete — <span style="color:var(--violet);">+${data.gain} ${magicLabel}</span>${uniqueMsg}</div>`
+          : `<div style="font-family:var(--font-mono);font-size:13px;color:var(--ivory-dim);text-align:center;padding:20px 0;">Invocation terminée — <span style="color:var(--violet);">+${data.gain} ${magicLabel}</span>${uniqueMsg}</div>`;
         renderCreature(creature);
       } catch(e){
-        $('minigame-content').innerHTML = `<div style="font-family:var(--font-mono);font-size:13px;color:var(--danger);text-align:center;padding:20px 0;">Erreur — réessaie plus tard.</div>`;
+        $('minigame-content').innerHTML = currentLang==='en'
+          ? `<div style="font-family:var(--font-mono);font-size:13px;color:var(--danger);text-align:center;padding:20px 0;">Error — try again later.</div>`
+          : `<div style="font-family:var(--font-mono);font-size:13px;color:var(--danger);text-align:center;padding:20px 0;">Erreur — réessaie plus tard.</div>`;
         console.error(e);
       }
     }
@@ -2720,7 +2731,7 @@ function startArcane(c){
       <div class="arcane-target" id="arcane-target">?</div>
       <div class="bar-track" style="margin:10px 0;"><div class="bar-fill" id="arcane-timer" style="width:100%;background:var(--violet);"></div></div>
       <div class="rune-grid" id="rune-grid"></div>
-      <div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);margin-top:8px;" id="arcane-status">Manche 1 / ${ARCANE_ROUNDS}</div>
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);margin-top:8px;" id="arcane-status">${currentLang==='en' ? `Round 1 / ${ARCANE_ROUNDS}` : `Manche 1 / ${ARCANE_ROUNDS}`}</div>
     `;
     playRound();
   });
