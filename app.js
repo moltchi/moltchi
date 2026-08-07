@@ -2770,15 +2770,21 @@ function renderCorruptPanel(c){
     const reqEl = $('corrupt-req-text');
     const btn = $('btn-unlock-corrupt');
     if(!eligible){
-      reqEl.innerHTML = `Condition manquante : atteindre l'étage <strong>${CORRUPT_UNLOCK_FLOOR}</strong> de la Tour du Wyrm (actuellement étage ${c.dungeonFloor}).`;
+      reqEl.innerHTML = currentLang==='en'
+        ? `Missing requirement: reach floor <strong>${CORRUPT_UNLOCK_FLOOR}</strong> of the Wyrm Tower (currently floor ${c.dungeonFloor}).`
+        : `Condition manquante : atteindre l'étage <strong>${CORRUPT_UNLOCK_FLOOR}</strong> de la Tour du Wyrm (actuellement étage ${c.dungeonFloor}).`;
       reqEl.style.color = 'var(--ember-bright)';
       btn.disabled = true;
     } else if((c.moltcoins||0) < CORRUPT_UNLOCK_COST){
-      reqEl.innerHTML = `Étage ${CORRUPT_UNLOCK_FLOOR} atteint ✓ — il te manque des Moltcoins (${c.moltcoins||0} / ${CORRUPT_UNLOCK_COST}).`;
+      reqEl.innerHTML = currentLang==='en'
+        ? `Floor ${CORRUPT_UNLOCK_FLOOR} reached ✓ — you're missing Moltcoins (${c.moltcoins||0} / ${CORRUPT_UNLOCK_COST}).`
+        : `Étage ${CORRUPT_UNLOCK_FLOOR} atteint ✓ — il te manque des Moltcoins (${c.moltcoins||0} / ${CORRUPT_UNLOCK_COST}).`;
       reqEl.style.color = 'var(--ivory-dim)';
       btn.disabled = true;
     } else {
-      reqEl.innerHTML = `Étage ${CORRUPT_UNLOCK_FLOOR} atteint ✓ — le passage peut être ouvert.`;
+      reqEl.innerHTML = currentLang==='en'
+        ? `Floor ${CORRUPT_UNLOCK_FLOOR} reached ✓ — the passage can be opened.`
+        : `Étage ${CORRUPT_UNLOCK_FLOOR} atteint ✓ — le passage peut être ouvert.`;
       reqEl.style.color = '#4ea88a';
       btn.disabled = false;
     }
@@ -2793,8 +2799,13 @@ function renderCorruptPanel(c){
   $('corrupt-floor-power').textContent = corruptFloorRequirement(c.corruptFloor);
   const attemptsLeft = c.corruptDay === todayKey() ? Math.max(0, maxCorruptAttempts(c) - c.corruptAttempts) : maxCorruptAttempts(c);
   const clearsLeft = c.corruptDay === todayKey() ? Math.max(0, maxCorruptClears(c) - c.corruptClears) : maxCorruptClears(c);
-  $('corrupt-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui";
-  $('corrupt-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint";
+  if(currentLang === 'en'){
+    $('corrupt-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} failure${attemptsLeft>1?'s':''} allowed today` : "No more failures allowed today";
+    $('corrupt-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} floor${clearsLeft>1?'s':''} climbable today` : "Daily floor cap reached";
+  } else {
+    $('corrupt-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui";
+    $('corrupt-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint";
+  }
   $('btn-climb-corrupt').disabled = c.stage === 0 || attemptsLeft === 0 || clearsLeft === 0;
   const pipRow = $('corrupt-pip-row'); pipRow.innerHTML = '';
   const used = c.corruptDay === todayKey() ? c.corruptAttempts : 0;
@@ -2803,11 +2814,20 @@ function renderCorruptPanel(c){
   const xpReward = corruptXP(c.corruptFloor);
   const xpFailReward = Math.max(1, Math.round(xpReward * 0.25));
   const rewardEl = $('corrupt-reward-info');
-  if(isCorruptLootFloor(c.corruptFloor)){
-    rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP + 1 objet exclusif au Sanctuaire. Défaite : +${xpFailReward} XP quand même.`;
+  if(currentLang === 'en'){
+    if(isCorruptLootFloor(c.corruptFloor)){
+      rewardEl.textContent = `This floor's reward: +${xpReward} XP + 1 Sanctuary-exclusive item. Loss: +${xpFailReward} XP anyway.`;
+    } else {
+      const next = c.corruptFloor - (c.corruptFloor % 5) + 5;
+      rewardEl.textContent = `This floor's reward: +${xpReward} XP. Next item at floor ${next}. Loss: +${xpFailReward} XP anyway.`;
+    }
   } else {
-    const next = c.corruptFloor - (c.corruptFloor % 5) + 5;
-    rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Défaite : +${xpFailReward} XP quand même.`;
+    if(isCorruptLootFloor(c.corruptFloor)){
+      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP + 1 objet exclusif au Sanctuaire. Défaite : +${xpFailReward} XP quand même.`;
+    } else {
+      const next = c.corruptFloor - (c.corruptFloor % 5) + 5;
+      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Défaite : +${xpFailReward} XP quand même.`;
+    }
   }
 }
 
@@ -3201,21 +3221,32 @@ async function startApp(){
     if(clearsLeft === 0) return;
     let data;
     try{ data = await performAction('dungeon_climb', {}); }
-    catch(e){ dungeonLog('Erreur — réessaie plus tard.', 'hit'); console.error(e); return; }
+    catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit'); console.error(e); return; }
     creature = mergeDefaults(data.creature);
+    const moltyxFoundTxt = currentLang==='en'
+      ? (n) => ` ✦ Moltyx found: ${n}!`
+      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
     if(data.win){
-      let msg = `Étage ${data.clearedFloor} vaincu ! +${data.xpGain} XP.`;
+      let msg = currentLang==='en'
+        ? `Floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
+        : `Étage ${data.clearedFloor} vaincu ! +${data.xpGain} XP.`;
       if(data.item){
-        msg += ` Butin : ${itemDisplayName(data.item)} (${(currentLang==='en'?RARITY_LABEL_EN:RARITY_LABEL)[data.item.rarity]}).`;
+        msg += currentLang==='en'
+          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
+          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
       } else {
         const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
-        msg += ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
+        msg += currentLang==='en'
+          ? ` No loot this time — next item at floor ${next}.`
+          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
       }
-      if(data.uniqueFound) msg += ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
       dungeonLog(msg, 'good');
     } else {
-      let msg = `Défaite à l'étage ${data.failFloor}. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
-      if(data.uniqueFound) msg += ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+      let msg = currentLang==='en'
+        ? `Defeat at floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
+        : `Défaite à l'étage ${data.failFloor}. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
       dungeonLog(msg, 'hit');
     }
     renderCreature(creature);
@@ -3240,21 +3271,32 @@ async function startApp(){
     if(clearsLeft === 0) return;
     let data;
     try{ data = await performAction('dungeon_climb_corrupt', {}); }
-    catch(e){ dungeonLog('Erreur — réessaie plus tard.', 'hit', 'corrupt-log'); console.error(e); return; }
+    catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit', 'corrupt-log'); console.error(e); return; }
     creature = mergeDefaults(data.creature);
+    const moltyxFoundTxt = currentLang==='en'
+      ? (n) => ` ✦ Moltyx found: ${n}!`
+      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
     if(data.win){
-      let msg = `Étage ${data.clearedFloor} du Sanctuaire vaincu ! +${data.xpGain} XP.`;
+      let msg = currentLang==='en'
+        ? `Sanctuary floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
+        : `Étage ${data.clearedFloor} du Sanctuaire vaincu ! +${data.xpGain} XP.`;
       if(data.item){
-        msg += ` Butin : ${itemDisplayName(data.item)} (${(currentLang==='en'?RARITY_LABEL_EN:RARITY_LABEL)[data.item.rarity]}).`;
+        msg += currentLang==='en'
+          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
+          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
       } else {
         const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
-        msg += ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
+        msg += currentLang==='en'
+          ? ` No loot this time — next item at floor ${next}.`
+          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
       }
-      if(data.uniqueFound) msg += ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
       dungeonLog(msg, 'good', 'corrupt-log');
     } else {
-      let msg = `Défaite à l'étage ${data.failFloor} du Sanctuaire. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
-      if(data.uniqueFound) msg += ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+      let msg = currentLang==='en'
+        ? `Defeat at Sanctuary floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
+        : `Défaite à l'étage ${data.failFloor} du Sanctuaire. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
       dungeonLog(msg, 'hit', 'corrupt-log');
     }
     renderCreature(creature);
