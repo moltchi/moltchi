@@ -1433,6 +1433,7 @@ const BOSS_CYCLE_MS = 7*24*60*60*1000;
 // à la stat de combat correspondante (voir le bloc de référence STAT_LABEL plus haut).
 const ELEMENT_TO_STAT = { feu:'crit', vent:'dodge', terre:'stamina', eau:'magic' };
 const ELEMENT_LABEL = { terre:'Terre', vent:'Vent', eau:'Eau', feu:'Feu' };
+const ELEMENT_LABEL_EN = { terre:'Earth', vent:'Wind', eau:'Water', feu:'Fire' };
 const BOSS_LIST = [
   { id:'ver_cendres',         name:'Le Ver-des-Cendres',         element:'feu',   weakness:'eau',  resistance:'vent',  image:'media/verdescendres.png', fallbackIcon:'🐉' },
   { id:'kraken_brumes',       name:'Le Kraken des Brumes',       element:'eau',   weakness:'terre', resistance:'feu',  image:'media/kraken.png',        fallbackIcon:'🐙' },
@@ -2225,8 +2226,11 @@ async function claimChestReward(){
 // ============================================================
 function renderBoss(boss){
   const def = bossDef(boss);
-  $('boss-name').textContent = def.name + (boss.kills > 0 ? ` (vaincu ${boss.kills}x)` : '');
-  $('boss-affinities').textContent = `Faible contre ${ELEMENT_LABEL[def.weakness]} (+20% dégâts subis) · Résiste à ${ELEMENT_LABEL[def.resistance]} (-10% dégâts subis)`;
+  const elLabel = currentLang === 'en' ? ELEMENT_LABEL_EN : ELEMENT_LABEL;
+  $('boss-name').textContent = def.name + (boss.kills > 0 ? (currentLang==='en' ? ` (defeated ${boss.kills}x)` : ` (vaincu ${boss.kills}x)`) : '');
+  $('boss-affinities').textContent = currentLang==='en'
+    ? `Weak against ${elLabel[def.weakness]} (+20% damage taken) · Resists ${elLabel[def.resistance]} (-10% damage taken)`
+    : `Faible contre ${elLabel[def.weakness]} (+20% dégâts subis) · Résiste à ${elLabel[def.resistance]} (-10% dégâts subis)`;
   const portraitImg = $('boss-portrait');
   const portraitFallback = $('boss-portrait-fallback');
   portraitFallback.textContent = def.fallbackIcon || '🐉';
@@ -2249,7 +2253,7 @@ function renderBoss(boss){
 function renderLeaderboard(lb, myId){
   const entries = Object.entries(lb).sort((a,b)=>b[1]-a[1]).slice(0,10);
   const ul = $('leaderboard'); ul.innerHTML = '';
-  if(entries.length === 0){ ul.innerHTML = '<li>Personne n\'a encore attaqué le Boss.</li>'; return; }
+  if(entries.length === 0){ ul.innerHTML = currentLang==='en' ? '<li>No one has attacked the Boss yet.</li>' : '<li>Personne n\'a encore attaqué le Boss.</li>'; return; }
   entries.forEach(([id,dmg],i)=>{
     const li = document.createElement('li');
     li.className = id === myId ? 'you' : '';
@@ -2258,9 +2262,9 @@ function renderLeaderboard(lb, myId){
     rank.className = 'rank';
     rank.textContent = `#${i+1}`;
     left.appendChild(rank);
-    left.appendChild(document.createTextNode(id === myId ? id + ' (toi)' : id));
+    left.appendChild(document.createTextNode(id === myId ? id + (currentLang==='en' ? ' (you)' : ' (toi)') : id));
     const right = document.createElement('span');
-    right.textContent = `${dmg.toLocaleString()} dégâts`;
+    right.textContent = currentLang==='en' ? `${dmg.toLocaleString()} damage` : `${dmg.toLocaleString()} dégâts`;
     li.appendChild(left);
     li.appendChild(right);
     ul.appendChild(li);
@@ -2287,8 +2291,12 @@ async function renderPendingBossRewards(){
   mine.forEach(r=>{
     totalXP += r.xp; totalCoins += r.moltcoins;
     const li = document.createElement('li');
-    const chanceTxt = r.moltyxChance > 0 ? `${(r.moltyxChance*100).toFixed(2).replace(/\.?0+$/,'')}% Moltyx` : (r.bossDefeated ? '0% Moltyx' : 'Boss non vaincu — pas de Moltyx');
-    li.innerHTML = `<span>Rang ${bossTierLabel(r.rank)} <span style="color:var(--ivory-dim);">(${r.damage.toLocaleString()} dégâts)</span></span><span>+${r.xp} XP · 🪙${r.moltcoins} · ${chanceTxt}</span>`;
+    const chanceTxt = r.moltyxChance > 0
+      ? `${(r.moltyxChance*100).toFixed(2).replace(/\.?0+$/,'')}% Moltyx`
+      : (r.bossDefeated ? '0% Moltyx' : (currentLang==='en' ? 'Boss not defeated — no Moltyx' : 'Boss non vaincu — pas de Moltyx'));
+    const rankWord = currentLang==='en' ? 'Rank' : 'Rang';
+    const dmgWord = currentLang==='en' ? 'damage' : 'dégâts';
+    li.innerHTML = `<span>${rankWord} ${bossTierLabel(r.rank)} <span style="color:var(--ivory-dim);">(${r.damage.toLocaleString()} ${dmgWord})</span></span><span>+${r.xp} XP · 🪙${r.moltcoins} · ${chanceTxt}</span>`;
     list.appendChild(li);
   });
   $('btn-claim-boss-rewards').onclick = async () => {
@@ -2305,13 +2313,15 @@ async function renderPendingBossRewards(){
         body: JSON.stringify({ scope: _getPlayerScope() })
       });
       const data = await res.json();
-      if(!res.ok){ log('Impossible de réclamer les récompenses pour le moment.', 'hit'); return; }
+      if(!res.ok){ log(currentLang==='en' ? 'Could not claim rewards right now.' : 'Impossible de réclamer les récompenses pour le moment.', 'hit'); return; }
       creature = mergeDefaults(data.creature);
       card.style.display = 'none';
       renderCreature(creature);
-      log(`Récompenses hebdomadaires réclamées : +${data.totalXP} XP, +${data.totalCoins} Moltcoins.${data.moltyxWon ? ' ✦ Eclat du Monde obtenu !' : ''}`, 'good');
+      log(currentLang==='en'
+        ? `Weekly rewards claimed: +${data.totalXP} XP, +${data.totalCoins} Moltcoins.${data.moltyxWon ? ' ✦ Eclat du Monde obtained!' : ''}`
+        : `Récompenses hebdomadaires réclamées : +${data.totalXP} XP, +${data.totalCoins} Moltcoins.${data.moltyxWon ? ' ✦ Eclat du Monde obtenu !' : ''}`, 'good');
     } catch(e){
-      log('Connexion au serveur impossible — réessaie.', 'hit');
+      log(currentLang==='en' ? 'Could not connect to the server — try again.' : 'Connexion au serveur impossible — réessaie.', 'hit');
     } finally {
       btn.disabled = false;
     }
@@ -3193,17 +3203,26 @@ async function startApp(){
         body: JSON.stringify({ scope: _getPlayerScope() })
       });
       const data = await res.json();
-      if(!res.ok){ log(data.error === 'quota d\'attaques atteint' ? 'Plus d\'attaque disponible aujourd\'hui.' : 'Attaque impossible pour le moment.', 'hit'); return; }
+      if(!res.ok){
+        const msg = data.error === 'quota d\'attaques atteint'
+          ? (currentLang==='en' ? 'No more attacks available today.' : 'Plus d\'attaque disponible aujourd\'hui.')
+          : (currentLang==='en' ? 'Attack unavailable right now.' : 'Attaque impossible pour le moment.');
+        log(msg, 'hit'); return;
+      }
       creature = mergeDefaults(data.creature);
       const boss2 = data.boss;
       boss = boss2;
       const lb2 = data.leaderboard;
-      if(data.bossDefeatedNow) log(`${bossDef(boss2).name} est vaincu ! Il renaît aussitôt — le classement de la semaine continue.`, 'good');
+      if(data.bossDefeatedNow) log(currentLang==='en'
+        ? `${bossDef(boss2).name} is defeated! It respawns immediately — the weekly ranking continues.`
+        : `${bossDef(boss2).name} est vaincu ! Il renaît aussitôt — le classement de la semaine continue.`, 'good');
       renderCreature(creature); renderBoss(boss2); renderLeaderboard(lb2, myId);
       await renderPendingBossRewards();
-      log(`${creature.name} inflige ${data.dmg} dégâts au Boss.`, 'hit');
+      log(currentLang==='en'
+        ? `${creature.name} deals ${data.dmg} damage to the Boss.`
+        : `${creature.name} inflige ${data.dmg} dégâts au Boss.`, 'hit');
     } catch(e){
-      log('Connexion au serveur impossible — réessaie.', 'hit');
+      log(currentLang==='en' ? 'Could not connect to the server — try again.' : 'Connexion au serveur impossible — réessaie.', 'hit');
     } finally {
       $('btn-attack').disabled = false;
     }
