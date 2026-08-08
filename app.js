@@ -2168,6 +2168,16 @@ async function startChestAd(index){
   $('chest-adblock-warning').style.display = blocked ? 'block' : 'none';
   if(blocked) return; // pas de pub visible = pas de coffre, pour éviter l'abus
 
+  // Démarre le minuteur côté SERVEUR (horodatage en base) — c'est lui, et non le minuteur
+  // local ci-dessous, qui fait foi pour chest_claim. Sans ça, un appel direct de chest_claim
+  // (console/curl) pouvait sauter le délai d'attente entièrement.
+  try{
+    await performAction('chest_start', {});
+  } catch(e){
+    console.error(e);
+    return;
+  }
+
   chestPendingIndex = index;
   renderChestsPanel(creature);
   const statusEl = $('chest-watch-status');
