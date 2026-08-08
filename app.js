@@ -1789,7 +1789,6 @@ function renderCreature(c){
   for(let i=0;i<attemptsMax;i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < used ? 'used' : 'available'); pipRow.appendChild(pip); }
 
   const MAX_EQUIP = 5;
-  const MAX_LEGENDARY_EQUIP = 1;
 
   const consumSection = $('consumables-section');
   const consumList = $('consumables-list');
@@ -1825,16 +1824,13 @@ function renderCreature(c){
   else {
     invList.innerHTML = '';
     const equippedCount = c.inventory.filter(i=>i.equipped && i.rarity !== 'unique').length;
-    const equippedLegendaryCount = c.inventory.filter(i=>i.equipped && i.rarity === 'legendary').length;
     c.inventory.slice().reverse().forEach(item=>{
       if(item.stat === undefined && item.rarity !== 'unique' && !item.defId){ item.stat='crit'; item.value=6; item.equipped=false; item.id='legacy_'+Math.random(); }
       const li = document.createElement('li');
       li.className = 'item-row' + (item.equipped ? ' equipped' : '');
       li.style.flexWrap = 'wrap';
       const isUnique = item.rarity === 'unique';
-      const isLegendary = item.rarity === 'legendary';
-      const legendaryBlocked = isLegendary && !item.equipped && equippedLegendaryCount >= MAX_LEGENDARY_EQUIP;
-      const canEquip = isUnique || item.equipped || (equippedCount < MAX_EQUIP && !legendaryBlocked);
+      const canEquip = isUnique || item.equipped || equippedCount < MAX_EQUIP;
       const statLabel = currentLang === 'en' ? STAT_LABEL_EN : STAT_LABEL;
       const rarityLabel = currentLang === 'en' ? RARITY_LABEL_EN : RARITY_LABEL;
       // Relit toujours la déf à jour d'ITEM_DB via defId pour l'affichage des stats,
@@ -1850,7 +1846,7 @@ function renderCreature(c){
       li.style.setProperty('--item-accent', accent);
       const btnLabel = item.equipped
         ? (currentLang === 'en' ? '✓ Equipped' : '✓ Équipé')
-        : (legendaryBlocked ? (currentLang === 'en' ? '1 Legendary max' : '1 Légendaire max') : (currentLang === 'en' ? 'Equip' : 'Équiper'));
+        : (currentLang === 'en' ? 'Equip' : 'Équiper');
       const sellPrice = SELL_PRICE[item.rarity];
       const sellLabel = currentLang === 'en' ? `Sell (+${sellPrice} 🪙)` : `Vendre (+${sellPrice} 🪙)`;
       const sellBtn = sellPrice ? `<button data-sell="${item.id}" style="font-size:11px;padding:5px 9px;">${sellLabel}</button>` : '';
