@@ -37,36 +37,61 @@ function _getPlayerScope(){
 }
 
 window.storage = {
+  // Cache mémoire de l'état privé du joueur (creature, username, language, ...),
+  // rempli une seule fois via l'Edge Function load-state (service_role). Depuis le
+  // verrouillage de la policy SELECT de kv_store à scope='shared' uniquement (la
+  // scope étant aussi le code de récupération — un secret — RLS ne peut plus la
+  // laisser lisible publiquement), un SELECT direct sur son propre scope n'est
+  // plus possible côté client : voir la conversation du 8 août 2026 / load-state.ts.
+  _privateCache: null,
+  _privateCachePromise: null,
+  async _loadPrivateState(force=false){
+    if(force){ this._privateCache = null; this._privateCachePromise = null; }
+    if(this._privateCache) return this._privateCache;
+    if(!this._privateCachePromise){
+      this._privateCachePromise = fetch(`${SUPABASE_URL}/functions/v1/load-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+        body: JSON.stringify({ scope: _getPlayerScope() })
+      }).then(async res => {
+        const data = await res.json();
+        if(!res.ok) throw new Error(data.error || 'lecture refusée par le serveur');
+        this._privateCache = data.values || {};
+        return this._privateCache;
+      }).finally(() => { this._privateCachePromise = null; });
+    }
+    return this._privateCachePromise;
+  },
   async get(key, shared=false){
-    const scope = shared ? 'shared' : _getPlayerScope();
-    const { data, error } = await _sb.from('kv_store').select('value').eq('scope', scope).eq('key', key).maybeSingle();
-    if(error) throw error;
-    if(!data) throw new Error('not found');
-    // Si la valeur stockée est une chaîne brute (ex: pseudo), on la renvoie telle quelle.
-    // Si c'est un objet/tableau/nombre (ex: créature en JSON), on la re-sérialise,
-    // car le reste du jeu fait systématiquement JSON.parse(r.value) pour ces clés-là.
-    const raw = typeof data.value === 'string' ? data.value : JSON.stringify(data.value);
+    if(shared){
+      const { data, error } = await _sb.from('kv_store').select('value').eq('scope', 'shared').eq('key', key).maybeSingle();
+      if(error) throw error;
+      if(!data) throw new Error('not found');
+      const raw = typeof data.value === 'string' ? data.value : JSON.stringify(data.value);
+      return { key, value: raw, shared };
+    }
+    const values = await this._loadPrivateState();
+    if(!(key in values)) throw new Error('not found');
+    const raw = typeof values[key] === 'string' ? values[key] : JSON.stringify(values[key]);
     return { key, value: raw, shared };
   },
+  // Écriture directe désactivée : RLS ne permet plus d'INSERT/UPDATE anon sur kv_store
+  // (voir SQL fourni). Toute écriture doit passer par performAction(...) (perform-action.ts,
+  // set_username, set_language, set_pref...), qui écrit en service_role après validation.
   async set(key, value, shared=false){
-    const scope = shared ? 'shared' : _getPlayerScope();
-    let parsed;
-    try{ parsed = JSON.parse(value); } catch(e){ parsed = value; } // chaîne brute (ex: pseudo) si ce n'est pas du JSON valide
-    const { error } = await _sb.from('kv_store').upsert({ scope, key, value: parsed, updated_at: new Date().toISOString() }, { onConflict: 'scope,key' });
-    if(error) throw error;
-    return { key, value, shared };
+    throw new Error(`écriture directe désactivée pour "${key}" — utilise performAction(...) à la place`);
   },
   async delete(key, shared=false){
-    const scope = shared ? 'shared' : _getPlayerScope();
-    const { error } = await _sb.from('kv_store').delete().eq('scope', scope).eq('key', key);
-    if(error) throw error;
-    return { key, deleted: true, shared };
+    throw new Error(`suppression directe désactivée pour "${key}" — utilise performAction(...) à la place`);
   },
   async list(prefix='', shared=false){
-    const scope = shared ? 'shared' : _getPlayerScope();
-    const { data, error } = await _sb.from('kv_store').select('key').eq('scope', scope).like('key', prefix + '%');
-    if(error) throw error;
-    return { keys: (data||[]).map(r=>r.key), prefix, shared };
+    if(shared){
+      const { data, error } = await _sb.from('kv_store').select('key').eq('scope', 'shared').like('key', prefix + '%');
+      if(error) throw error;
+      return { keys: (data||[]).map(r=>r.key), prefix, shared };
+    }
+    const values = await this._loadPrivateState();
+    return { keys: Object.keys(values).filter(k => k.startsWith(prefix)), prefix, shared };
   }
 };
 
@@ -219,7 +244,7 @@ async function loadLanguage(){
   try{ const r = await window.storage.get('language', false); return r.value; }
   catch(e){ return 'fr'; }
 }
-async function saveLanguage(lang){ try{ await performAction('set_language', { lang }); }catch(e){console.error(e);} }
+async function saveLanguage(lang){ try{ await performAction('set_language', { lang }); if(window.storage._privateCache) window.storage._privateCache.language = lang; }catch(e){console.error(e);} }
 
 function applyLanguage(lang){
   currentLang = lang;
@@ -507,7 +532,7 @@ async function toggleMusic(){
     if(bgMusic.volume === 0){
       bgMusic.volume = 0.5;
       $('music-volume').value = '50';
-      try{ await window.storage.set('music_volume', '0.5', false); }catch(e){}
+      try{ await performAction('set_pref', { key: 'music_volume', value: '0.5' }); }catch(e){}
     }
     try{ await bgMusic.play(); }catch(e){}
   } else {
@@ -515,7 +540,7 @@ async function toggleMusic(){
     bgMusic.pause();
   }
   updateMusicButton();
-  try{ await window.storage.set('music_on', String(!musicPreferenceOff), false); }catch(e){}
+  try{ await performAction('set_pref', { key: 'music_on', value: String(!musicPreferenceOff) }); }catch(e){}
 }
 $('music-toggle-btn').onclick = toggleMusic;
 
@@ -531,8 +556,8 @@ $('music-volume').addEventListener('input', async (e) => {
   }
   updateMusicButton();
   try{
-    await window.storage.set('music_on', String(!musicPreferenceOff), false);
-    await window.storage.set('music_volume', String(vol), false);
+    await performAction('set_pref', { key: 'music_on', value: String(!musicPreferenceOff) });
+    await performAction('set_pref', { key: 'music_volume', value: String(vol) });
   }catch(err){}
 });
 
@@ -658,6 +683,7 @@ async function getUsername(){
 }
 async function setUsername(name){
   const data = await performAction('set_username', { name });
+  if(window.storage._privateCache) window.storage._privateCache.username = data.username;
   return data.username;
 }
 
