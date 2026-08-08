@@ -1351,7 +1351,7 @@ function maxDungeonClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // 
 
 // --- Sanctuaire Corrompu — second donjon, verrouillé jusqu'à l'étage 100 de la Tour du Wyrm + achat ---
 const CORRUPT_UNLOCK_FLOOR = 100;
-const CORRUPT_UNLOCK_COST = 1000; // en Moltcoins
+const CORRUPT_UNLOCK_COST = 2000; // en Moltcoins
 function corruptUnlockEligible(c){ return c.dungeonFloor >= CORRUPT_UNLOCK_FLOOR; }
 // --- Principe de chaînage des donjons (à respecter pour tout futur donjon supplémentaire) ---
 // Chaque nouveau donjon reprend narrativement la difficulté de l'étage 100 du précédent
