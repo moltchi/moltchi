@@ -1370,7 +1370,7 @@ function totalPower(c){
 // NB : maxBossAttacks (Boss Mondial) est ici par proximité de code
 // historique, mais logiquement il appartient à la section Boss plus bas.
 // ============================================================
-function floorRequirement(floor){ return Math.round(50 * Math.pow(1.05, floor - 1)); }
+function floorRequirement(floor){ return Math.round(50 * Math.pow(1.04222, floor - 1)); }
 function maxBossAttacks(c){ return c.species === 'Luminel' ? 4 : 3; }
 function maxDungeonAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour
 function maxDungeonClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour
