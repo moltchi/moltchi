@@ -124,9 +124,15 @@
   (Content-Security-Policy) par ton hébergeur — la balise <meta> ne peut pas tout faire
   (ex: frame-ancestors est ignoré ici, il faut un vrai en-tête pour ça — impossible sur
   GitHub Pages, qui ne permet pas de configurer d'en-têtes HTTP personnalisés).
+
+  X-Content-Type-Options / X-Frame-Options / frame-ancestors : AUCUN des trois ne peut être
+  posé en <meta> (les navigateurs les ignorent silencieusement hors vrai en-tête HTTP) — pas
+  la peine d'essayer une balise <meta> ici, ça ne ferait qu'illusion. Sur GitHub Pages +
+  domaine chez amen.fr, la seule solution gratuite est de mettre Cloudflare (plan gratuit)
+  devant en proxy DNS et d'ajouter ces en-têtes via une Transform Rule ("Modify Response
+  Header") — voir la conversation du 8 août 2026 pour la procédure complète.
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://oouqtclsffybeloulvph.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self';">
-<meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moltchi — Simulateur RPG d'animal virtuel</title>
 <link rel="icon" type="image/png" href="media/moltchi.png">
@@ -435,7 +441,7 @@
     <div class="card" id="corrupt-locked-card" style="text-align:center;">
       <h2 data-i18n="h2_corrupt_locked">🔒 Sanctuaire Corrompu</h2>
       <p id="corrupt-req-text" style="font-family:var(--font-mono);font-size:13px;margin-top:10px;"></p>
-      <button id="btn-unlock-corrupt" class="primary big" style="margin-top:14px;">Débloquer — 🪙 2000 Moltcoins</button>
+      <button id="btn-unlock-corrupt" class="primary big" style="margin-top:14px;">Débloquer — 🪙 1000 Moltcoins</button>
     </div>
     <div class="card" id="corrupt-play-card" style="display:none;">
       <h2 data-i18n="h2_corrupt">Sanctuaire Corrompu</h2>
@@ -613,6 +619,20 @@
     <div class="terms-modal">
       <button id="btn-close-terms" class="terms-modal-close">✕</button>
       <div id="terms-modal-content" class="terms-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- MODALE STREAK DE CONNEXION QUOTIDIENNE -->
+  <div id="streak-modal-overlay" class="terms-modal-overlay" style="display:none;">
+    <div class="terms-modal streak-modal">
+      <button id="btn-close-streak" class="terms-modal-close">✕</button>
+      <div class="terms-modal-content" style="text-align:center;">
+        <h2>🔥 <span data-i18n="streak_title">Bonus de connexion</span></h2>
+        <div class="streak-count-line" id="streak-count-line">Jour 1</div>
+        <div class="streak-best-line" id="streak-best-line"></div>
+        <div class="streak-days-row" id="streak-days-row"></div>
+        <button id="btn-claim-streak" class="primary streak-claim-btn" data-i18n="streak_claim">Réclamer</button>
+      </div>
     </div>
   </div>
 
