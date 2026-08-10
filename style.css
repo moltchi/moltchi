@@ -1,4 +1,4 @@
-  /* ============================================================
+/* ============================================================
      ============ VARIABLES DE THÈME (couleurs, polices) ============
      ============================================================ */
   :root{
@@ -430,6 +430,21 @@
   .terms-modal-content .terms-updated{font-family:var(--font-mono);font-size:10.5px;color:var(--ivory-dim);opacity:0.7;margin:0 0 16px;}
   .terms-modal-content ul{margin:6px 0;padding-left:20px;}
   .terms-modal-content strong{color:var(--ivory);}
+
+  /* ---- Modale streak de connexion quotidienne (réutilise le cadre .terms-modal) ---- */
+  .streak-modal{max-width:440px;}
+  .streak-count-line{font-family:var(--font-display);font-size:22px;color:var(--gold);margin:2px 0 2px;}
+  .streak-best-line{font-family:var(--font-mono);font-size:11px;color:var(--ivory-dim);min-height:14px;margin-bottom:4px;}
+  .streak-days-row{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:16px 0 6px;}
+  .streak-day-badge{padding:5px 2px 4px;border-radius:8px;text-align:center;
+    background:var(--moss-900);border:1px solid var(--moss-700);}
+  .streak-day-badge .day-num{font-family:var(--font-mono);font-size:8.5px;color:var(--ivory-dim);}
+  .streak-day-badge .day-reward{font-family:var(--font-display);font-size:11px;color:var(--gold-bright);margin-top:1px;}
+  .streak-day-badge .day-candy{font-size:9px;margin-top:1px;line-height:1;}
+  .streak-day-badge.is-past{opacity:0.4;}
+  .streak-day-badge.is-current{border-color:var(--gold);box-shadow:0 0 0 2px rgba(226,166,63,0.25);}
+  .streak-day-badge.has-candy{background:var(--moss-800);}
+  .streak-claim-btn{display:block;margin:14px auto 4px;min-width:140px;}
   .minigame-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;}
   .minigame-card{background:var(--moss-950);border:1px solid var(--moss-700);border-radius:6px;padding:12px;text-align:center;}
   .minigame-card .icon{font-size:24px;}
