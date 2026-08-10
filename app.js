@@ -238,6 +238,8 @@ const I18N_EN = {
   p_codex_intro: 'The Compendium lists every known Moltchi item — common, rare, epic, legendary — as well as the unique Moltyx.',
   footer_rights: 'All rights reserved.',
   footer_terms: 'Terms of Service & Sale',
+  streak_title: 'Daily Login Bonus',
+  streak_claim: 'Claim',
 };
 
 async function loadLanguage(){
@@ -874,6 +876,7 @@ function defaultCreature(){
     corruptUnlocked: false, corruptFloor: 1, corruptAttempts: 0, corruptClears: 0, corruptDay: null,
     careDay: null, careUsed: 0,
     chestsDay: null, chestsOpened: 0,
+    loginStreak: 0, bestLoginStreak: 0, lastLoginDay: null,
     inventory: [],
     consumables: {},
     moltcoins: 0, treasureAP: 5, treasureAPLastTick: Date.now(), treasureHistory: []
@@ -2309,6 +2312,100 @@ function renderLeaderboard(lb, myId){
 function log(msg, cls){ const el = $('log'); const div = document.createElement('div'); if(cls) div.className = cls; div.textContent = msg; el.prepend(div); }
 function dungeonLog(msg, cls, elId){ const el = $(elId || 'dungeon-log'); const div = document.createElement('div'); if(cls) div.className = cls; div.textContent = msg; el.prepend(div); }
 
+// ============ STREAK DE CONNEXION QUOTIDIENNE ============
+// Cycle de 30 jours, récompenses croissantes, un bonbon différent aux jours 7/14/21/28
+// (fin de chaque semaine de connexion) et un jackpot au jour 30. Purement décoratif/
+// prévisionnel ici — le calcul du jour/série et l'octroi réel de la récompense sont
+// entièrement décidés par le serveur (claim_daily_login, perform-action.ts /
+// DAILY_STREAK_REWARDS). À tenir synchronisé avec le serveur si tu changes l'un des deux,
+// mais un léger désaccord ici ne casserait rien de grave (juste un aperçu inexact avant le
+// clic sur "Réclamer").
+const DAILY_STREAK_REWARDS_PREVIEW = {
+  1: { coins: 10 }, 2: { coins: 12 }, 3: { coins: 14 }, 4: { coins: 17 }, 5: { coins: 20 }, 6: { coins: 24 },
+  7: { coins: 40, candyIds: ['candy_training'] },
+  8: { coins: 16 }, 9: { coins: 18 }, 10: { coins: 21 }, 11: { coins: 24 }, 12: { coins: 28 }, 13: { coins: 32 },
+  14: { coins: 55, candyIds: ['candy_dungeon'] },
+  15: { coins: 20 }, 16: { coins: 23 }, 17: { coins: 26 }, 18: { coins: 30 }, 19: { coins: 34 }, 20: { coins: 39 },
+  21: { coins: 70, candyIds: ['candy_boss'] },
+  22: { coins: 26 }, 23: { coins: 29 }, 24: { coins: 33 }, 25: { coins: 37 }, 26: { coins: 42 }, 27: { coins: 47 },
+  28: { coins: 90, candyIds: ['candy_treasure'] },
+  29: { coins: 55 },
+  30: { coins: 150, candyIds: ['candy_training','candy_dungeon','candy_boss','candy_treasure'] },
+};
+function yesterdayKeyClient(){ const d = new Date(); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0,10); }
+
+// Construit la grille des 30 jours (façon calendrier, 7 colonnes) — jour courant mis en
+// avant — à partir de l'état ACTUEL de la créature, c'est-à-dire avant réclamation du jour.
+// Le jour qui va être réclamé au clic est prévisible sans dupliquer la logique serveur :
+// consécutif => streak+1, sinon => 1.
+function renderStreakPreview(){
+  const willBeConsecutive = creature.lastLoginDay === yesterdayKeyClient();
+  const upcomingStreak = willBeConsecutive ? (creature.loginStreak || 0) + 1 : 1;
+  const cycleDay = ((upcomingStreak - 1) % 30) + 1;
+  const row = $('streak-days-row');
+  row.innerHTML = '';
+  for(let day = 1; day <= 30; day++){
+    const r = DAILY_STREAK_REWARDS_PREVIEW[day];
+    const badge = document.createElement('div');
+    badge.className = 'streak-day-badge' + (day < cycleDay ? ' is-past' : '') + (day === cycleDay ? ' is-current' : '') + (r.candyIds ? ' has-candy' : '');
+    const numEl = document.createElement('div'); numEl.className = 'day-num';
+    numEl.textContent = day;
+    const rewardEl = document.createElement('div'); rewardEl.className = 'day-reward';
+    rewardEl.textContent = '+' + r.coins;
+    badge.appendChild(numEl); badge.appendChild(rewardEl);
+    if(r.candyIds){
+      const bonusEl = document.createElement('div'); bonusEl.className = 'day-candy';
+      bonusEl.textContent = '🍬'.repeat(r.candyIds.length);
+      badge.appendChild(bonusEl);
+      badge.title = r.candyIds.map(id => (CONSUMABLE_DB.find(d=>d.id===id)||{}).name || id).join(' · ');
+    }
+    row.appendChild(badge);
+  }
+  $('streak-count-line').textContent = currentLang === 'en'
+    ? (upcomingStreak === 1 ? 'Day 1' : `Day ${upcomingStreak} in a row!`)
+    : (upcomingStreak === 1 ? 'Jour 1' : `Jour ${upcomingStreak} d'affilée !`);
+  $('streak-best-line').textContent = (creature.bestLoginStreak || 0) > 1
+    ? (currentLang === 'en' ? `Best streak: ${creature.bestLoginStreak}` : `Record : ${creature.bestLoginStreak}`)
+    : '';
+}
+function openStreakModalIfDue(){
+  if(!creature || creature.stage === 0) return; // pas de Moltchi actif = pas de streak à proposer
+  if(creature.lastLoginDay === todayKey()) return; // déjà réclamé aujourd'hui
+  renderStreakPreview();
+  $('streak-modal-overlay').style.display = 'flex';
+}
+async function claimDailyStreak(){
+  const btn = $('btn-claim-streak');
+  btn.disabled = true;
+  let data;
+  try{
+    data = await performAction('claim_daily_login', {});
+  } catch(e){
+    console.error(e);
+    btn.disabled = false;
+    return;
+  }
+  creature = mergeDefaults(data.creature);
+  renderCreature(creature);
+  $('streak-modal-overlay').style.display = 'none';
+  btn.disabled = false;
+
+  let msg = currentLang === 'en'
+    ? `Daily streak: day ${data.streak} — +${data.reward.coins} Moltcoins 🪙`
+    : `Série quotidienne : jour ${data.streak} — +${data.reward.coins} Moltcoins 🪙`;
+  if(data.reward.consumables && data.reward.consumables.length){
+    const names = data.reward.consumables.map(c => {
+      const def = CONSUMABLE_DB.find(d => d.id === c.id);
+      return def ? `${def.icon} ${currentLang==='en' ? (def.name_en||def.name) : def.name}` : c.id;
+    }).join(' · ');
+    msg += currentLang === 'en' ? ` · ${names} obtained!` : ` · ${names} obtenu(s) !`;
+  }
+  log(msg, 'good');
+}
+$('btn-claim-streak').onclick = claimDailyStreak;
+$('btn-close-streak').onclick = () => { $('streak-modal-overlay').style.display = 'none'; };
+$('streak-modal-overlay').onclick = (e) => { if(e.target.id === 'streak-modal-overlay') $('streak-modal-overlay').style.display = 'none'; };
+
 // Affiche les récompenses hebdomadaires du Boss Mondial en attente pour ce joueur
 // (calculées lors du dernier reset de cycle) et permet de toutes les réclamer d'un coup.
 async function renderPendingBossRewards(){
@@ -3111,6 +3208,7 @@ async function startApp(){
     } catch(e){ console.error('sync échoué :', e); }
   }
   renderCreature(creature);
+  openStreakModalIfDue();
   await handleStripeReturn();
 
   boss = await loadBoss();
