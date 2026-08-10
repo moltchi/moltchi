@@ -2355,7 +2355,7 @@ function renderStreakPreview(){
     badge.appendChild(numEl); badge.appendChild(rewardEl);
     if(r.candyIds){
       const bonusEl = document.createElement('div'); bonusEl.className = 'day-candy';
-      bonusEl.textContent = '🍬'.repeat(r.candyIds.length);
+      bonusEl.textContent = r.candyIds.map(id => (CONSUMABLE_DB.find(d=>d.id===id)||{}).icon || '🍬').join('');
       badge.appendChild(bonusEl);
       badge.title = r.candyIds.map(id => (CONSUMABLE_DB.find(d=>d.id===id)||{}).name || id).join(' · ');
     }
