@@ -2351,7 +2351,7 @@ function renderStreakPreview(){
     const numEl = document.createElement('div'); numEl.className = 'day-num';
     numEl.textContent = day;
     const rewardEl = document.createElement('div'); rewardEl.className = 'day-reward';
-    rewardEl.textContent = '+' + r.coins;
+    rewardEl.textContent = '+' + r.coins + '🪙';
     badge.appendChild(numEl); badge.appendChild(rewardEl);
     if(r.candyIds){
       const bonusEl = document.createElement('div'); bonusEl.className = 'day-candy';
