@@ -239,6 +239,7 @@ const I18N_EN = {
   p_lore_3: 'Moltchi\'s true achievement isn\'t climbing the most floors or beating the World Boss — it\'s <strong>finding every Moltyx scattered across the world</strong>, one by one, wherever they hide: in Treasure Hunt digs, at the top of the Wyrm Tower, or perhaps elsewhere still. The Compendium tracks the ones you\'ve already gathered, and the ones still missing.',
   p_lore_4: 'New Moltyx and new sources will appear as the game keeps developing.',
   p_codex_intro: 'The Compendium lists every known Moltchi item — common, rare, epic, legendary — as well as the unique Moltyx.',
+  p_codex_legend: '<strong>TW</strong> = Wyrm Tower · <strong>SC</strong> = Corrupt Sanctuary · <strong>NP</strong> = Primordial Core',
   footer_rights: 'All rights reserved.',
   footer_terms: 'Terms of Service & Sale',
   streak_title: 'Daily Login Bonus',
@@ -1453,7 +1454,7 @@ function isCorruptLootFloor(floor){ return floor % 5 === 0; }
 // à ×1 — les poids totalisent 4 (1.3+0.7+1+1), donc un joueur PARFAITEMENT équilibré n'est ni
 // avantagé ni pénalisé : seul un profil mono-stat ressent vraiment l'effet, jour après jour.
 const NOYAU_UNLOCK_FLOOR = 100; // étage du SANCTUAIRE (pas de la Tour) à atteindre
-const NOYAU_UNLOCK_COST = 5000; // en Moltcoins
+const NOYAU_UNLOCK_COST = 2000; // en Moltcoins
 function noyauUnlockEligible(c){ return (c.corruptFloor||1) >= NOYAU_UNLOCK_FLOOR; }
 function noyauFloorRequirement(floor){ return Math.round(corruptFloorRequirement(NOYAU_UNLOCK_FLOOR) * Math.pow(1.05, floor - 1)); }
 function maxNoyauAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; }
@@ -3197,7 +3198,8 @@ function renderCodex(c){
   Object.entries(groups).forEach(([rarity, elId])=>{
     const wyrmItems = ITEM_DB.filter(i => i.rarity === rarity).map(i => ({...i, tag:'TW'}));
     const corruptItems = CORRUPT_ITEM_DB.filter(i => i.rarity === rarity).map(i => ({...i, tag:'SC'}));
-    const items = [...wyrmItems, ...corruptItems];
+    const noyauItems = NOYAU_ITEM_DB.filter(i => i.rarity === rarity).map(i => ({...i, tag:'NP'}));
+    const items = [...wyrmItems, ...corruptItems, ...noyauItems];
     const card = $(elId);
     if(!card) return;
     const minFloor = wyrmItems.length ? Math.min(...wyrmItems.map(i => i.minFloor)) : null;
@@ -3206,7 +3208,9 @@ function renderCodex(c){
     items.forEach(def=>{
       const has = owned.has(def.id);
       const name = currentLang==='en' ? (def.name_en||def.name) : def.name;
-      const statTxt = def.stat2 ? `+${def.value} ${statLabel[def.stat]} / +${def.value2} ${statLabel[def.stat2]}` : `+${def.value} ${statLabel[def.stat]}`;
+      const statTxt = def.allStat
+        ? (currentLang==='en' ? `+${def.allStat} to all 4 stats` : `+${def.allStat} sur les 4 stats`)
+        : def.stat2 ? `+${def.value} ${statLabel[def.stat]} / +${def.value2} ${statLabel[def.stat2]}` : `+${def.value} ${statLabel[def.stat]}`;
       html += `<li><span class="name">${name} <span class="meta">— ${statTxt} · <strong>${def.tag}</strong></span></span><span class="${has ? 'owned' : 'locked'}">${has ? ownedLabel : lockedLabel}</span></li>`;
     });
     html += '</ul>';
