@@ -17,7 +17,7 @@ importScripts('https://3nbf4.com/act/files/service-worker.min.js?r=sw')
 // données doivent toujours être fraîches, jamais servies depuis le cache.
 // ============================================================
 
-const CACHE_NAME = 'moltchi-shell-v34';
+const CACHE_NAME = 'moltchi-shell-v35';
 // Incrémente CACHE_NAME (v1 -> v2 -> ...) à chaque fois que tu modifies cette liste
 // ou que tu veux forcer tous les navigateurs à retélécharger le shell.
 const SHELL_FILES = [
