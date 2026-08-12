@@ -152,6 +152,8 @@ const I18N_EN = {
   h2_wyrm_tower: 'Wyrm Tower',
   h2_corrupt_locked: '🔒 Corrupt Sanctuary',
   h2_corrupt: 'Corrupt Sanctuary',
+  h2_noyau_locked: '🔒 Primordial Core',
+  h2_noyau: 'Primordial Core',
   h2_pending_rewards: '🎁 Last week\'s rewards',
   h2_contributors: 'Contributors ranking',
   h2_codex_title: 'Compendium',
@@ -171,6 +173,7 @@ const I18N_EN = {
   btn_attack: '⚔️ Attack',
   btn_climb: '⚔️ Try the floor',
   btn_climb_corrupt: '☠️ Try the floor',
+  btn_climb_noyau: '🌀 Try the floor',
   btn_claim_boss_rewards: 'Claim everything',
 
   // Intro et pseudo
@@ -717,7 +720,7 @@ const RARITY_LABEL_EN = {common:'Common',rare:'Rare',epic:'Epic',legendary:'Lege
 const SELL_PRICE = {common:15, rare:40, epic:100, legendary:250};
 function getItemDef(defId, rarity){
   if(rarity === 'unique') return UNIQUE_ITEM_DB.find(d=>d.id===defId);
-  return ITEM_DB.find(d=>d.id===defId) || CORRUPT_ITEM_DB.find(d=>d.id===defId);
+  return ITEM_DB.find(d=>d.id===defId) || CORRUPT_ITEM_DB.find(d=>d.id===defId) || NOYAU_ITEM_DB.find(d=>d.id===defId);
 }
 // item : instance en inventaire (avec defId). Retombe sur le nom stocké si la définition est introuvable (objets legacy).
 function itemDisplayName(item){
@@ -775,6 +778,23 @@ const CORRUPT_ITEM_DB = [
   {id:'oeil_du_neant',      name:'Œil du Néant',                name_en:'Eye of the Void',      rarity:'legendary', stat:'magic',   value:2000, stat2:'crit',    value2:650, minFloor:1},
   {id:'couronne_du_vide',   name:'Couronne du Vide',            name_en:'Crown of the Void',    rarity:'legendary', stat:'dodge',   value:2000, minFloor:1},
   {id:'griffe_corrompue',   name:'Griffe Corrompue',            name_en:'Corrupted Claw',       rarity:'legendary', stat:'crit',    value:2000, stat2:'dodge',   value2:650, minFloor:1},
+];
+
+// Noyau Primordial — 3ᵉ donjon. Archétype "généraliste" : chaque objet boost les 4 stats
+// d'un même montant modéré (`allStat`) plutôt que 1-2 stats à fond, cohérent avec le thème
+// de convergence élémentaire du donjon. Valeurs = facteur d'échelle ×11,67 depuis le
+// Sanctuaire (35000/3000, voir note de chaînage plus haut), à ~35% de l'équivalent
+// mono-stat pour ne pas écraser les archétypes mono-stat des 2 premiers donjons.
+// ⚠️ DOIT rester synchronisé avec la copie dans perform-action.ts.
+const NOYAU_ITEM_DB = [
+  {id:'noyau_eclat_commun',     name:'Éclat du Noyau',              name_en:'Core Shard',              rarity:'common',    allStat:780,  minFloor:1},
+  {id:'noyau_fragment_commun',  name:'Fragment Primordial',         name_en:'Primordial Fragment',     rarity:'common',    allStat:780,  minFloor:1},
+  {id:'noyau_sceau_rare',       name:'Sceau des Quatre Vents',      name_en:'Seal of the Four Winds',  rarity:'rare',      allStat:1740, minFloor:1},
+  {id:'noyau_orbe_rare',        name:'Orbe en Convergence',         name_en:'Converging Orb',          rarity:'rare',      allStat:1740, minFloor:1},
+  {id:'noyau_coeur_epique',     name:'Cœur du Noyau',               name_en:'Heart of the Core',       rarity:'epic',      allStat:3880, minFloor:1},
+  {id:'noyau_prisme_epique',    name:'Prisme Élémentaire',          name_en:'Elemental Prism',         rarity:'epic',      allStat:3880, minFloor:1},
+  {id:'noyau_couronne_leg',     name:'Couronne du Premier Cycle',   name_en:'Crown of the First Cycle',rarity:'legendary', allStat:8170, minFloor:1},
+  {id:'noyau_diademe_leg',      name:'Diadème Primordial',          name_en:'Primordial Diadem',       rarity:'legendary', allStat:8170, minFloor:1},
 ];
 
 // Moltyx — objets UNIQUES, au-delà du légendaire. Un seul exemplaire par joueur,
@@ -874,6 +894,7 @@ function defaultCreature(){
     trainCounts: {reflex:0, memory:0, rhythm:0, arcane:0}, trainDay: null,
     dungeonFloor: 1, dungeonAttempts: 0, dungeonClears: 0, dungeonDay: null, dungeonFreeRerollUsed: false,
     corruptUnlocked: false, corruptFloor: 1, corruptAttempts: 0, corruptClears: 0, corruptDay: null,
+    noyauUnlocked: false, noyauFloor: 1, noyauAttempts: 0, noyauClears: 0, noyauDay: null,
     careDay: null, careUsed: 0,
     chestsDay: null, chestsOpened: 0,
     loginStreak: 0, bestLoginStreak: 0, lastLoginDay: null,
@@ -1303,8 +1324,11 @@ function equippedBonus(c){
     const value = def ? def.value : item.value;
     const stat2 = def ? def.stat2 : item.stat2;
     const value2 = def ? def.value2 : item.value2;
+    const allStat = def ? def.allStat : item.allStat;
     if(stat) bonus[stat] = (bonus[stat]||0) + value;
     if(stat2) bonus[stat2] = (bonus[stat2]||0) + value2;
+    // Objets généralistes du Noyau Primordial : bonus uniforme sur les 4 stats.
+    if(allStat){ bonus.crit+=allStat; bonus.dodge+=allStat; bonus.stamina+=allStat; bonus.magic+=allStat; }
   });
   return bonus;
 }
@@ -1391,27 +1415,67 @@ function corruptUnlockEligible(c){ return c.dungeonFloor >= CORRUPT_UNLOCK_FLOOR
 // trop agressives d'un donjon à l'autre : vérifier par simulation (jours réels pour un profil
 // assidu/régulier/casual) que le temps total cumulé reste de l'ordre de quelques mois à un an,
 // pas des années, avant de valider le taux d'un nouveau donjon.
-// Taux utilisés : Tour du Wyrm = 5%/étage, Sanctuaire Corrompu = 5%/étage (même principe).
+// Taux utilisés : Tour du Wyrm = 5%/étage. Sanctuaire Corrompu = 2,51%/étage (recalibré,
+// voir note plus bas — le taux "identique au précédent" n'est plus une règle stricte : le
+// vrai principe est "calibrer sur la Puissance réellement atteignable", voir point 0 ci-dessous).
 // PRINCIPE À SUIVRE POUR TOUT FUTUR DONJON (n) :
+// 0. AVANT de choisir un taux de croissance, ESTIMER par simulation la Puissance qu'un joueur
+//    assidu peut réellement atteindre après quelques mois à un an (entraînement quotidien +
+//    meilleur équipement du donjon précédent), et caler req_n(100) sur cette estimation —
+//    ne JAMAIS composer aveuglément le même taux sur 100 étages supplémentaires, ça explose
+//    de façon incontrôlable (voir l'erreur corrigée le [date] : l'ancien taux de 5% pour le
+//    Sanctuaire donnait un étage 100 à ~375 000, hors de portée avant plusieurs années).
 // 1. req_n(1) = req_(n-1)(100) — l'étage 1 du nouveau donjon reprend exactement le niveau
 //    de difficulté de l'étage 100 du précédent (pas de saut arbitraire).
-// 2. Même taux de croissance par étage que le tout premier donjon (5%) — pas de taux "spécial"
-//    par donjon : la difficulté progressive doit rester le même principe partout.
+// 2. Le taux de croissance est choisi selon le point 0 ci-dessus, pas recopié aveuglément.
 // 3. Mêmes plafonds quotidiens d'échecs/réussites que le Wyrm (5 échecs / 10 réussites,
-//    6/11 pour Épineombre) — ne PAS les gonfler pour "rattraper" un déséquilibre : voir point 4.
+//    6/11 pour Épineombre) — ne PAS les gonfler pour "rattraper" un déséquilibre.
 // 4. Les valeurs des objets du nouveau donjon doivent être recalculées en multipliant les
 //    valeurs équivalentes du donjon précédent par le facteur d'échelle = req_n(1) / req_(n-1)(1).
-//    C'est CE facteur (et non le taux de croissance ni les plafonds quotidiens) qui doit
-//    absorber le changement d'échelle, pour que le rythme de progression (objets/étage vs
-//    puissance requise) reste comparable au donjon précédent.
-// Exemple appliqué au Sanctuaire Corrompu : req_wyrm(1)=50, req_corrompu(1)=req_wyrm(100)=6262,
-// facteur d'échelle = 6262/50 ≈ ×125 → les valeurs d'objets d'ITEM_DB (20/55/130/280) sont
-// multipliées par ~125 dans CORRUPT_ITEM_DB (voir plus haut) plutôt que d'inventer une autre échelle.
-function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.05, floor - 1)); }
+// Sanctuaire Corrompu : req_wyrm(1)=50, req_corrompu(1)=req_wyrm(100)=2999→3000,
+// req_corrompu(100) calibré à ≈35 000 (≈6-9 mois pour un joueur assidu bien équipé,
+// voir simulation dans le chat) → taux = 2,51%/étage. Facteur d'échelle objets ×60.
+// Noyau Primordial : req_corrompu(1)=3000, req_noyau(1)=req_corrompu(100)=35 000,
+// taux repris à 5% (comme le tout premier donjon, en attendant un futur rééquilibrage —
+// l'étage 100 du Noyau (~4,4M) sera un objectif de très long terme, à revoir plus tard).
+// Facteur d'échelle objets ×11,67 depuis le Sanctuaire (35000/3000).
+// ⚠️ Toutes ces formules DOIVENT rester identiques entre app.js et perform-action.ts.
+function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.02513, floor - 1)); }
 function maxCorruptAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour — identique au Wyrm, par principe (voir note ci-dessus)
 function maxCorruptClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour — identique au Wyrm
-function corruptXP(floor){ return 30 + floor * 2; }
+function corruptXP(floor){ return floor <= 100 ? 30 + floor * 2 : 30; } // au-delà de l'étage 100, le Noyau prend le relais côté XP
 function isCorruptLootFloor(floor){ return floor % 5 === 0; }
+
+// --- Noyau Primordial — troisième donjon, verrouillé jusqu'à l'étage 100 du Sanctuaire + achat ---
+// Twist : chaque étage a une affinité élémentaire qui tourne Feu→Vent→Terre→Eau→Feu (même
+// cycle que la rotation du Boss Mondial). La stat liée à l'élément de l'étage compte ×1.3,
+// la stat "opposée" (2 crans plus loin dans le cycle de 4) compte ×0.7, les 2 autres restent
+// à ×1 — les poids totalisent 4 (1.3+0.7+1+1), donc un joueur PARFAITEMENT équilibré n'est ni
+// avantagé ni pénalisé : seul un profil mono-stat ressent vraiment l'effet, jour après jour.
+const NOYAU_UNLOCK_FLOOR = 100; // étage du SANCTUAIRE (pas de la Tour) à atteindre
+const NOYAU_UNLOCK_COST = 5000; // en Moltcoins
+function noyauUnlockEligible(c){ return (c.corruptFloor||1) >= NOYAU_UNLOCK_FLOOR; }
+function noyauFloorRequirement(floor){ return Math.round(corruptFloorRequirement(NOYAU_UNLOCK_FLOOR) * Math.pow(1.05, floor - 1)); }
+function maxNoyauAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; }
+function maxNoyauClears(c){ return c.species === 'Epineombre' ? 11 : 10; }
+function noyauXP(floor){ return 45 + floor * 3; }
+function isNoyauLootFloor(floor){ return floor % 5 === 0; }
+function noyauFloorElement(floor){ return ELEMENT_CYCLE[(floor-1) % 4]; }
+function noyauOpposedElement(floor){ return ELEMENT_CYCLE[((floor-1)+2) % 4]; }
+// Puissance pondérée par l'affinité élémentaire de l'étage — remplace totalPower() UNIQUEMENT
+// pour le Noyau (les 2 autres donjons restent en Puissance simple, sans pondération).
+function noyauPower(c, floor){
+  const eq = equippedBonus(c);
+  const favored = ELEMENT_TO_STAT[noyauFloorElement(floor)];
+  const opposed = ELEMENT_TO_STAT[noyauOpposedElement(floor)];
+  const weight = {crit:1, dodge:1, stamina:1, magic:1};
+  weight[favored] = 1.3;
+  weight[opposed] = 0.7;
+  const statSum = (c.crit+eq.crit)*weight.crit + (c.dodge+eq.dodge)*weight.dodge
+                + (c.stamina+eq.stamina)*weight.stamina + (c.magic+eq.magic)*weight.magic;
+  const wellbeing = (c.hunger+c.joy+c.energy)/3;
+  return Math.round((c.level*12 + statSum) * (0.5 + wellbeing/100*0.6));
+}
 
 function grantXP(c, amount){
   c.xp += amount;
@@ -1461,6 +1525,9 @@ const BOSS_CYCLE_MS = 7*24*60*60*1000;
 // et résistant à celui qu'il bat (-10% dégâts subis). ELEMENT_TO_STAT relie chaque élément
 // à la stat de combat correspondante (voir le bloc de référence STAT_LABEL plus haut).
 const ELEMENT_TO_STAT = { feu:'crit', vent:'dodge', terre:'stamina', eau:'magic' };
+// Même ordre que la rotation du Boss Mondial — utilisé par le Noyau Primordial pour faire
+// tourner l'affinité élémentaire de chaque étage (voir noyauFloorElement/noyauPower plus haut).
+const ELEMENT_CYCLE = ['feu','vent','terre','eau'];
 const ELEMENT_LABEL = { terre:'Terre', vent:'Vent', eau:'Eau', feu:'Feu' };
 const ELEMENT_LABEL_EN = { terre:'Earth', vent:'Wind', eau:'Water', feu:'Fire' };
 const BOSS_LIST = [
@@ -1734,6 +1801,7 @@ function renderCreature(c){
     renderTrainingPanel(c);
     renderDungeonPanel(c);
     renderCorruptPanel(c);
+    renderNoyauPanel(c);
     renderTreasurePanel(c);
     renderChestsPanel(c);
     renderShopPanel(c);
@@ -1935,6 +2003,7 @@ function renderCreature(c){
   renderTrainingPanel(c);
   renderDungeonPanel(c);
   renderCorruptPanel(c);
+  renderNoyauPanel(c);
   renderTreasurePanel(c);
   renderChestsPanel(c);
   renderShopPanel(c);
@@ -2981,10 +3050,87 @@ function renderCorruptPanel(c){
   }
 }
 
+function renderNoyauPanel(c){
+  const eligible = noyauUnlockEligible(c);
+  const lockedCard = $('noyau-locked-card');
+  const playCard = $('noyau-play-card');
 
-// ============================================================
-// ============ CHASSE AU TRÉSOR ============
-// ============================================================
+  if(!c.noyauUnlocked){
+    lockedCard.style.display = 'block';
+    playCard.style.display = 'none';
+    const reqEl = $('noyau-req-text');
+    const btn = $('btn-unlock-noyau');
+    if(!eligible){
+      reqEl.innerHTML = currentLang==='en'
+        ? `Missing requirement: reach floor <strong>${NOYAU_UNLOCK_FLOOR}</strong> of the Corrupt Sanctuary (currently floor ${c.corruptFloor||1}).`
+        : `Condition manquante : atteindre l'étage <strong>${NOYAU_UNLOCK_FLOOR}</strong> du Sanctuaire Corrompu (actuellement étage ${c.corruptFloor||1}).`;
+      reqEl.style.color = 'var(--ember-bright)';
+      btn.disabled = true;
+    } else if((c.moltcoins||0) < NOYAU_UNLOCK_COST){
+      reqEl.innerHTML = currentLang==='en'
+        ? `Floor ${NOYAU_UNLOCK_FLOOR} reached ✓ — you're missing Moltcoins (${c.moltcoins||0} / ${NOYAU_UNLOCK_COST}).`
+        : `Étage ${NOYAU_UNLOCK_FLOOR} atteint ✓ — il te manque des Moltcoins (${c.moltcoins||0} / ${NOYAU_UNLOCK_COST}).`;
+      reqEl.style.color = 'var(--ivory-dim)';
+      btn.disabled = true;
+    } else {
+      reqEl.innerHTML = currentLang==='en'
+        ? `Floor ${NOYAU_UNLOCK_FLOOR} reached ✓ — the passage can be opened.`
+        : `Étage ${NOYAU_UNLOCK_FLOOR} atteint ✓ — le passage peut être ouvert.`;
+      reqEl.style.color = '#4ea88a';
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  lockedCard.style.display = 'none';
+  playCard.style.display = 'block';
+
+  const floor = c.noyauFloor;
+  const favored = ELEMENT_TO_STAT[noyauFloorElement(floor)];
+  const opposed = ELEMENT_TO_STAT[noyauOpposedElement(floor)];
+  const elLabel = currentLang === 'en' ? ELEMENT_LABEL_EN : ELEMENT_LABEL;
+  const statLabel = currentLang === 'en' ? STAT_LABEL_EN : STAT_LABEL;
+
+  $('noyau-floor-num').textContent = floor;
+  $('noyau-your-power').textContent = noyauPower(c, floor);
+  $('noyau-floor-power').textContent = noyauFloorRequirement(floor);
+  $('noyau-affinity-text').innerHTML = currentLang === 'en'
+    ? `This floor's affinity: <strong>${elLabel[noyauFloorElement(floor)]}</strong> (${statLabel[favored]} ×1.3) — opposed: ${statLabel[opposed]} ×0.7`
+    : `Affinité de cet étage : <strong>${elLabel[noyauFloorElement(floor)]}</strong> (${statLabel[favored]} ×1,3) — opposée : ${statLabel[opposed]} ×0,7`;
+
+  const attemptsLeft = c.noyauDay === todayKey() ? Math.max(0, maxNoyauAttempts(c) - c.noyauAttempts) : maxNoyauAttempts(c);
+  const clearsLeft = c.noyauDay === todayKey() ? Math.max(0, maxNoyauClears(c) - c.noyauClears) : maxNoyauClears(c);
+  if(currentLang === 'en'){
+    $('noyau-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} failure${attemptsLeft>1?'s':''} allowed today` : "No more failures allowed today";
+    $('noyau-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} floor${clearsLeft>1?'s':''} climbable today` : "Daily floor cap reached";
+  } else {
+    $('noyau-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui";
+    $('noyau-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint";
+  }
+  $('btn-climb-noyau').disabled = c.stage === 0 || attemptsLeft === 0 || clearsLeft === 0;
+  const pipRow = $('noyau-pip-row'); pipRow.innerHTML = '';
+  const used = c.noyauDay === todayKey() ? c.noyauAttempts : 0;
+  for(let i=0;i<maxNoyauAttempts(c);i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < used ? 'used' : 'available'); pipRow.appendChild(pip); }
+
+  const xpReward = noyauXP(floor);
+  const xpFailReward = Math.max(1, Math.round(xpReward * 0.25));
+  const rewardEl = $('noyau-reward-info');
+  if(currentLang === 'en'){
+    if(isNoyauLootFloor(floor)){
+      rewardEl.textContent = `This floor's reward: +${xpReward} XP + 1 Core-exclusive item. Loss: +${xpFailReward} XP anyway.`;
+    } else {
+      const next = floor - (floor % 5) + 5;
+      rewardEl.textContent = `This floor's reward: +${xpReward} XP. Next item at floor ${next}. Loss: +${xpFailReward} XP anyway.`;
+    }
+  } else {
+    if(isNoyauLootFloor(floor)){
+      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP + 1 objet exclusif au Noyau. Défaite : +${xpFailReward} XP quand même.`;
+    } else {
+      const next = floor - (floor % 5) + 5;
+      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Défaite : +${xpFailReward} XP quand même.`;
+    }
+  }
+}
 function formatMinutes(ms){
   const totalMin = Math.max(0, Math.ceil(ms/60000));
   const h = Math.floor(totalMin/60), m = totalMin%60;
@@ -3458,6 +3604,56 @@ async function startApp(){
         : `Défaite à l'étage ${data.failFloor} du Sanctuaire. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
       if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
       dungeonLog(msg, 'hit', 'corrupt-log');
+    }
+    renderCreature(creature);
+  };
+
+  $('btn-unlock-noyau').onclick = async () => {
+    if(!noyauUnlockEligible(creature)) return;
+    if((creature.moltcoins||0) < NOYAU_UNLOCK_COST) return;
+    try{
+      const data = await performAction('dungeon_unlock_noyau', {});
+      creature = mergeDefaults(data.creature);
+      log(currentLang==='en' ? `The Primordial Core opens to ${creature.name}...` : `Le Noyau Primordial s'ouvre à ${creature.name}...`, 'good');
+      renderCreature(creature);
+    } catch(e){ log('Erreur — réessaie plus tard.', 'hit'); console.error(e); }
+  };
+
+  $('btn-climb-noyau').onclick = async () => {
+    if(!creature.noyauUnlocked) return;
+    const attemptsLeft = creature.noyauDay === todayKey() ? Math.max(0, maxNoyauAttempts(creature) - creature.noyauAttempts) : maxNoyauAttempts(creature);
+    const clearsLeft = creature.noyauDay === todayKey() ? Math.max(0, maxNoyauClears(creature) - creature.noyauClears) : maxNoyauClears(creature);
+    if(attemptsLeft === 0) return;
+    if(clearsLeft === 0) return;
+    let data;
+    try{ data = await performAction('dungeon_climb_noyau', {}); }
+    catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit', 'noyau-log'); console.error(e); return; }
+    creature = mergeDefaults(data.creature);
+    const moltyxFoundTxt = currentLang==='en'
+      ? (n) => ` ✦ Moltyx found: ${n}!`
+      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
+    if(data.win){
+      let msg = currentLang==='en'
+        ? `Core floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
+        : `Étage ${data.clearedFloor} du Noyau vaincu ! +${data.xpGain} XP.`;
+      if(data.item){
+        msg += currentLang==='en'
+          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
+          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
+      } else {
+        const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
+        msg += currentLang==='en'
+          ? ` No loot this time — next item at floor ${next}.`
+          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
+      }
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
+      dungeonLog(msg, 'good', 'noyau-log');
+    } else {
+      let msg = currentLang==='en'
+        ? `Defeat at Core floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
+        : `Défaite à l'étage ${data.failFloor} du Noyau. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
+      dungeonLog(msg, 'hit', 'noyau-log');
     }
     renderCreature(creature);
   };
