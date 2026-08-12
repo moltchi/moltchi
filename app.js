@@ -2082,12 +2082,17 @@ async function detectAdBlocker(){
 // que côté serveur, sans stockage ni tâche planifiée (voir perform-action.ts).
 const SHOP_TOWER_COST = 1000;
 const SHOP_CORRUPT_COST = 2500;
+const SHOP_CANDY_COST = 250;
 function hashStringToInt(s){
   let h = 0;
   for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) | 0; }
   return Math.abs(h);
 }
 function weeklyShopPick(dungeonId){
+  if(dungeonId === 'candy'){
+    const seed = hashStringToInt(weekKey() + ':candy');
+    return CONSUMABLE_DB[seed % CONSUMABLE_DB.length];
+  }
   const pool = (dungeonId === 'wyrm' ? ITEM_DB : CORRUPT_ITEM_DB).filter(i => i.rarity === 'legendary');
   const seed = hashStringToInt(weekKey() + ':' + dungeonId);
   return pool[seed % pool.length];
@@ -2112,6 +2117,7 @@ function renderShopPanel(c){
   const entries = [
     { id:'wyrm', label: currentLang==='en' ? 'Wyrm Tower' : 'Tour du Wyrm', cost: applyDiscount(SHOP_TOWER_COST), baseCost: SHOP_TOWER_COST, locked: false },
     { id:'corrupt', label: currentLang==='en' ? 'Corrupted Sanctuary' : 'Sanctuaire Corrompu', cost: applyDiscount(SHOP_CORRUPT_COST), baseCost: SHOP_CORRUPT_COST, locked: !c.corruptUnlocked },
+    { id:'candy', label: currentLang==='en' ? 'Weekly Candy' : 'Bonbon Hebdomadaire', cost: applyDiscount(SHOP_CANDY_COST), baseCost: SHOP_CANDY_COST, locked: false },
   ];
 
   entries.forEach(entry => {
@@ -2127,10 +2133,13 @@ function renderShopPanel(c){
     const priceLabel = discountPct > 0
       ? `<span style="text-decoration:line-through;opacity:0.55;">🪙 ${entry.baseCost}</span> 🪙 ${entry.cost} Moltcoins`
       : `🪙 ${entry.cost} Moltcoins`;
+    const isCandy = entry.id === 'candy';
+    const candyName = currentLang==='en' ? (def.name_en||def.name) : def.name;
+    const candyDesc = currentLang==='en' ? (def.desc_en||def.desc) : def.desc;
     card.innerHTML = `
       <p style="font-size:11px;color:var(--ivory-dim);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px;">${entry.label}</p>
-      <p style="font-weight:700;color:var(--gold);margin:0 0 6px;">✨ ${def.name}</p>
-      <p style="font-size:12px;color:var(--ivory-dim);margin:0 0 10px;">${statLine(def)}</p>
+      <p style="font-weight:700;color:var(--gold);margin:0 0 6px;">${isCandy ? `${def.icon} ${candyName}` : `✨ ${def.name}`}</p>
+      <p style="font-size:12px;color:var(--ivory-dim);margin:0 0 10px;">${isCandy ? candyDesc : statLine(def)}</p>
       ${entry.locked
         ? `<p style="font-size:12px;color:var(--danger);">${lockedMsg}</p>`
         : bought
