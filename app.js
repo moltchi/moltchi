@@ -1747,12 +1747,12 @@ async function sendChatMessage(){
   errEl.style.display = 'none';
   if(!text) return;
   if(text.length > CHAT_MAX_LENGTH){
-    errEl.textContent = `Message trop long (max ${CHAT_MAX_LENGTH} caractères).`;
+    errEl.textContent = currentLang==='en' ? `Message too long (max ${CHAT_MAX_LENGTH} characters).` : `Message trop long (max ${CHAT_MAX_LENGTH} caractères).`;
     errEl.style.display = 'block';
     return;
   }
   if(containsBannedWord(text)){
-    errEl.textContent = 'Message bloqué : merci de rester respectueux envers les autres joueurs.';
+    errEl.textContent = currentLang==='en' ? 'Message blocked: please stay respectful of other players.' : 'Message bloqué : merci de rester respectueux envers les autres joueurs.';
     errEl.style.display = 'block';
     return;
   }
@@ -1775,8 +1775,8 @@ async function sendChatMessage(){
     const data = await res.json();
     if(!res.ok){
       errEl.textContent = data.error === 'cooldown actif'
-        ? 'Merci d\'attendre un peu avant de renvoyer un message.'
-        : 'Le chat est très actif, ton message n\'a pas pu être envoyé — réessaie.';
+        ? (currentLang==='en' ? 'Please wait a bit before sending another message.' : 'Merci d\'attendre un peu avant de renvoyer un message.')
+        : (currentLang==='en' ? "Chat is very active right now, your message couldn't be sent — try again." : 'Le chat est très actif, ton message n\'a pas pu être envoyé — réessaie.');
       errEl.style.display = 'block';
       return;
     }
@@ -1785,7 +1785,7 @@ async function sendChatMessage(){
     renderChat(pruneOldChatMessages(data.messages).slice(-CHAT_MAX_MESSAGES));
     updateChatCooldownUI();
   } catch(e){
-    errEl.textContent = 'Connexion au serveur impossible — réessaie.';
+    errEl.textContent = currentLang==='en' ? 'Could not reach the server — try again.' : 'Connexion au serveur impossible — réessaie.';
     errEl.style.display = 'block';
   } finally {
     chatSending = false;
@@ -1836,7 +1836,7 @@ async function pickSpecies(key){
     creature = mergeDefaults(data.creature);
     renderCreature(creature);
     log(`${creature.name} le ${SPECIES[creature.species].name} a éclos !`);
-  } catch(e){ log('Erreur — réessaie plus tard.', 'hit'); console.error(e); }
+  } catch(e){ log(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit'); console.error(e); }
 }
 
 
@@ -1904,10 +1904,11 @@ function renderCreature(c){
     $('sigil').textContent = SIGILS[c.species] || STAGE_SIGILS[c.stage];
     delete $('sigil').dataset.mediaKey;
   }
-  $('creature-name').textContent = c.name || 'Sans nom';
+  $('creature-name').textContent = c.name || (currentLang==='en' ? 'Unnamed' : 'Sans nom');
   const spName = SPECIES[c.species] ? SPECIES[c.species].name : '';
   $('level-pill').textContent = currentLang === 'en' ? `LVL ${c.level}` : `NIV. ${c.level}`;
-  $('creature-meta').textContent = `${['','Nouveau-né','Juvénile','Adolescent'][c.stage]} · ${spName}`;
+  const stageLabels = currentLang === 'en' ? ['','Newborn','Juvenile','Teen'] : ['','Nouveau-né','Juvénile','Adolescent'];
+  $('creature-meta').textContent = `${stageLabels[c.stage]} · ${spName}`;
   const xpNeeded = c.level * 50;
   $('xp-val').textContent = `${Math.round(c.xp)}/${xpNeeded}`;
   const xpPct = Math.min(1, c.xp / xpNeeded);
@@ -2334,7 +2335,7 @@ async function startChestAd(index){
     secondsLeft -= 1;
     if(secondsLeft <= 0){
       clearInterval(tick);
-      statusEl.textContent = 'Publicité terminée !';
+      statusEl.textContent = currentLang==='en' ? 'Ad finished!' : 'Publicité terminée !';
       claimBtn.style.display = 'inline-block';
       chestClaimReady = true;
     } else {
@@ -3333,8 +3334,11 @@ function renderCodex(c){
 // l'application (init/confirmUsername/startApp).
 // ============================================================
 function restoreFromCode(code, statusEl){
-  if(!code){ statusEl.style.color = 'var(--danger)'; statusEl.textContent = 'Colle d\'abord un code de récupération.'; return; }
-  if(!confirm('Restaurer ce code va remplacer la progression actuelle de cet appareil par celle liée à ce code. Continuer ?')) return;
+  if(!code){ statusEl.style.color = 'var(--danger)'; statusEl.textContent = currentLang==='en' ? 'Paste a recovery code first.' : 'Colle d\'abord un code de récupération.'; return; }
+  const confirmMsg = currentLang==='en'
+    ? "Restoring this code will replace this device's current progress with the one linked to this code. Continue?"
+    : 'Restaurer ce code va remplacer la progression actuelle de cet appareil par celle liée à ce code. Continuer ?';
+  if(!confirm(confirmMsg)) return;
   localStorage.setItem('moltchi_player_scope', code);
   location.reload();
 }
@@ -3361,7 +3365,7 @@ async function confirmUsername(){
   const val = $('username-input').value.trim();
   const errorEl = $('username-error');
   if(val.length < 2 || val.length > 18){
-    errorEl.textContent = 'Choisis un pseudo entre 2 et 18 caractères.';
+    errorEl.textContent = currentLang==='en' ? 'Choose a username between 2 and 18 characters.' : 'Choisis un pseudo entre 2 et 18 caractères.';
     errorEl.style.display = 'block';
     return;
   }
@@ -3369,8 +3373,8 @@ async function confirmUsername(){
     await setUsername(val);
   } catch(e){
     errorEl.textContent = e.message === 'ce pseudo est déjà pris'
-      ? 'Ce pseudo est déjà pris — choisis-en un autre.'
-      : 'Erreur — réessaie plus tard.';
+      ? (currentLang==='en' ? 'This username is already taken — pick another one.' : 'Ce pseudo est déjà pris — choisis-en un autre.')
+      : (currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.');
     errorEl.style.display = 'block';
     return;
   }
@@ -3485,16 +3489,18 @@ async function startApp(){
   $('btn-toggle-recovery-visibility').onclick = () => {
     const hidden = recoveryDisplay.style.filter !== 'none';
     recoveryDisplay.style.filter = hidden ? 'none' : 'blur(5px)';
-    $('btn-toggle-recovery-visibility').textContent = hidden ? '🙈 Masquer' : '👁️ Afficher';
+    $('btn-toggle-recovery-visibility').textContent = hidden
+      ? (currentLang==='en' ? '🙈 Hide' : '🙈 Masquer')
+      : (currentLang==='en' ? '👁️ Show' : '👁️ Afficher');
   };
   $('btn-copy-recovery').onclick = async () => {
     try{
       await navigator.clipboard.writeText(localStorage.getItem('moltchi_player_scope') || '');
       $('recovery-status').style.color = 'var(--gold)';
-      $('recovery-status').textContent = 'Code copié ✓';
+      $('recovery-status').textContent = currentLang==='en' ? 'Code copied ✓' : 'Code copié ✓';
     }catch(e){
       $('recovery-status').style.color = 'var(--danger)';
-      $('recovery-status').textContent = 'Copie impossible — sélectionne et copie le code manuellement.';
+      $('recovery-status').textContent = currentLang==='en' ? 'Could not copy — select and copy the code manually.' : 'Copie impossible — sélectionne et copie le code manuellement.';
     }
   };
 
@@ -3635,7 +3641,7 @@ async function startApp(){
       creature = mergeDefaults(data.creature);
       log(`Le Sanctuaire Corrompu s'ouvre à ${creature.name}...`, 'good');
       renderCreature(creature);
-    } catch(e){ log('Erreur — réessaie plus tard.', 'hit'); console.error(e); }
+    } catch(e){ log(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit'); console.error(e); }
   };
 
   $('btn-climb-corrupt').onclick = async () => {
@@ -3685,7 +3691,7 @@ async function startApp(){
       creature = mergeDefaults(data.creature);
       log(currentLang==='en' ? `The Primordial Core opens to ${creature.name}...` : `Le Noyau Primordial s'ouvre à ${creature.name}...`, 'good');
       renderCreature(creature);
-    } catch(e){ log('Erreur — réessaie plus tard.', 'hit'); console.error(e); }
+    } catch(e){ log(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit'); console.error(e); }
   };
 
   $('btn-climb-noyau').onclick = async () => {
