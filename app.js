@@ -244,6 +244,52 @@ const I18N_EN = {
   footer_terms: 'Terms of Service & Sale',
   streak_title: 'Daily Login Bonus',
   streak_claim: 'Claim',
+
+  // --- Ajouts audit i18n HTML du [date] ---
+  page_title: 'Moltchi — Virtual Pet RPG Simulator',
+  eyebrow_subtitle: 'Virtual Pet RPG Simulator',
+  title_back_home: 'Back to My Creature',
+  ph_username: 'Your username…',
+  btn_start: "Let's go!",
+  err_username_length: 'Choose a username between 2 and 18 characters.',
+  ph_recovery_code: 'Paste your recovery code…',
+  btn_restore: 'Restore',
+  stat_crit_fire: 'Crit (Fire)',
+  stat_speed_wind: 'Speed (Wind)',
+  stat_stamina_earth: 'Endurance (Earth)',
+  stat_magic_water: 'Magic (Water)',
+  mg_reflex_name: 'Reflex',
+  mg_memory_name: 'Memory',
+  mg_rhythm_name: 'Rhythm',
+  mg_arcane_name: 'Arcane',
+  stat_crit_fire_arrow: '→ Crit (Fire)',
+  stat_speed_wind_arrow: '→ Speed (Wind)',
+  stat_stamina_earth_arrow: '→ Endurance (Earth)',
+  stat_magic_water_arrow: '→ Magic (Water)',
+  btn_surprise: '🎲 Surprise me',
+  btn_auto_equip: '⚡ Auto-equip the best',
+  h3_consumables: '🍬 Consumables',
+  btn_show: '👁️ Show',
+  btn_copy: '📋 Copy',
+  btn_abandon: '💀 Abandon this Moltchi',
+  btn_abandon_confirm: 'Confirm abandon',
+  lbl_current_floor: 'Current floor',
+  lbl_your_power: 'Your power',
+  lbl_floor_challenge: 'Floor challenge',
+  btn_unlock_corrupt: 'Unlock — 🪙 2000 Moltcoins',
+  btn_unlock_noyau: 'Unlock — 🪙 2000 Moltcoins',
+  bp_premium_title: '✦ Premium Pass',
+  p_chest_adblock: '🚫 Ad blocker detected — disable it for this site (or whitelist Moltchi) to open chests.',
+  btn_chest_claim: '🎉 Claim reward',
+  lbl_moltcoins: 'Moltcoins 🪙',
+  lbl_action_points: 'Action Points',
+  btn_dig: '⛏️ Dig (1 AP)',
+  p_treasure_history: 'The last 10 digs are shown and kept.',
+  chat_title: '💬 World Chat',
+  stat_crit_short: 'Crit',
+  stat_speed_short: 'Speed',
+  stat_stamina_short: 'Endurance',
+  stat_magic_short: 'Magic',
 };
 
 async function loadLanguage(){
@@ -262,6 +308,16 @@ function applyLanguage(lang){
     } else {
       el.innerHTML = el.dataset.frOriginal;
     }
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.dataset.i18nPlaceholder;
+    if(el.dataset.frOriginalPlaceholder === undefined) el.dataset.frOriginalPlaceholder = el.getAttribute('placeholder') || '';
+    el.setAttribute('placeholder', (lang === 'en' && I18N_EN[key] !== undefined) ? I18N_EN[key] : el.dataset.frOriginalPlaceholder);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.dataset.i18nTitle;
+    if(el.dataset.frOriginalTitle === undefined) el.dataset.frOriginalTitle = el.getAttribute('title') || '';
+    el.setAttribute('title', (lang === 'en' && I18N_EN[key] !== undefined) ? I18N_EN[key] : el.dataset.frOriginalTitle);
   });
   document.documentElement.lang = lang;
   $('lang-btn-fr').style.background = lang === 'fr' ? 'var(--gold)' : 'transparent';

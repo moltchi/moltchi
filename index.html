@@ -134,7 +134,7 @@
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://oouqtclsffybeloulvph.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Moltchi — Simulateur RPG d'animal virtuel</title>
+<title data-i18n="page_title">Moltchi — Simulateur RPG d'animal virtuel</title>
 <link rel="icon" type="image/png" href="media/moltchi.png">
 <!-- PWA : rend le jeu installable sur mobile/PC (icône d'accueil, mode plein écran). -->
 <link rel="manifest" href="manifest.json">
@@ -181,26 +181,26 @@
 </div>
 <audio id="bg-music" src="media/moonberry-tower.mp3" loop preload="auto"></audio>
 <div class="wrap">
-  <div class="eyebrow">Simulateur RPG d'animal virtuel</div>
+  <div class="eyebrow" data-i18n="eyebrow_subtitle">Simulateur RPG d'animal virtuel</div>
   <div style="position:relative;max-width:420px;margin:0 0 8px;">
     <div style="position:absolute;inset:-30px;background:radial-gradient(ellipse at 50% 50%, rgba(224,166,63,0.35), rgba(176,111,224,0.2) 55%, transparent 75%);filter:blur(6px);pointer-events:none;z-index:-1;"></div>
-    <img id="game-title-img" src="media/moltchi.png" alt="Moltchi" style="display:block;max-width:100%;cursor:pointer;" title="Retour à Ma créature">
+    <img id="game-title-img" src="media/moltchi.png" alt="Moltchi" style="display:block;max-width:100%;cursor:pointer;" data-i18n-title="title_back_home" title="Retour à Ma créature">
   </div>
 
   <div class="card" id="username-card" style="display:none;">
     <h2 data-i18n="h2_welcome">Bienvenue dans Moltchi</h2>
     <p data-i18n="p_welcome_intro">Un RPG d'élevage de créature façon jeu de poche old-school : fais éclore ta créature, entraîne-la et explore des donjons et unis tes forces à celles de tous les joueurs pour terrasser un Boss Mondial partagé. Collectionne des objets rares, dont les précieux Moltyx uniques.</p>
     <div class="actions" style="margin-top:8px;">
-      <input type="text" id="username-input" maxlength="18" placeholder="Ton pseudo…" style="flex:1;min-width:160px;padding:10px 12px;border-radius:4px;border:1px solid var(--moss-700);background:var(--moss-950);color:var(--ivory);font-family:var(--font-body);font-size:13px;">
-      <button id="btn-confirm-username" class="primary">C'est parti !</button>
+      <input type="text" id="username-input" maxlength="18" data-i18n-placeholder="ph_username" placeholder="Ton pseudo…" style="flex:1;min-width:160px;padding:10px 12px;border-radius:4px;border:1px solid var(--moss-700);background:var(--moss-950);color:var(--ivory);font-family:var(--font-body);font-size:13px;">
+      <button id="btn-confirm-username" class="primary" data-i18n="btn_start">C'est parti !</button>
     </div>
-    <p id="username-error" style="color:var(--danger);display:none;">Choisis un pseudo entre 2 et 18 caractères.</p>
+    <p id="username-error" data-i18n="err_username_length" style="color:var(--danger);display:none;">Choisis un pseudo entre 2 et 18 caractères.</p>
 
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--moss-700);">
       <p data-i18n="p_restore_hint" style="font-size:11px;color:var(--ivory-dim);margin:0 0 8px;">Tu as déjà un Moltchi sur un autre appareil ? Restaure ta progression avant de continuer.</p>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <input type="text" id="pre-recovery-code-input" placeholder="Colle ton code de récupération…" style="flex:1;min-width:180px;padding:8px 10px;border-radius:4px;border:1px solid var(--moss-700);background:var(--moss-950);color:var(--ivory);font-family:var(--font-mono);font-size:11px;box-sizing:border-box;">
-        <button id="btn-pre-restore-recovery" style="border-color:var(--danger);font-size:11px;padding:6px 10px;">Restaurer</button>
+        <input type="text" id="pre-recovery-code-input" data-i18n-placeholder="ph_recovery_code" placeholder="Colle ton code de récupération…" style="flex:1;min-width:180px;padding:8px 10px;border-radius:4px;border:1px solid var(--moss-700);background:var(--moss-950);color:var(--ivory);font-family:var(--font-mono);font-size:11px;box-sizing:border-box;">
+        <button id="btn-pre-restore-recovery" data-i18n="btn_restore" style="border-color:var(--danger);font-size:11px;padding:6px 10px;">Restaurer</button>
       </div>
       <p id="pre-recovery-status" style="font-size:11px;color:var(--gold);margin:6px 0 0;"></p>
     </div>
@@ -264,10 +264,10 @@
           <h2 data-i18n="h2_combat_stats">Les stats de combat</h2>
           <table class="howto">
             <tr><th data-i18n="th_stat">Stat</th><th data-i18n="th_gained_via">Gagnée via</th><th data-i18n="th_boss_impact">Impact Boss Mondial</th><th data-i18n="th_dungeon_impact">Impact Donjon</th></tr>
-            <tr><td>Critique (Feu)</td><td data-i18n="td_minigame_reflex">Mini-jeu Réflexe</td><td data-i18n="td_crit_boss">Augmente les dégâts contre le Boss</td><td data-i18n="td_increases_power">Augmente la Puissance</td></tr>
-            <tr><td>Vitesse (Vent)</td><td data-i18n="td_minigame_memory">Mini-jeu Mémoire</td><td data-i18n="td_speed_boss">Augmente les dégâts contre le Boss</td><td data-i18n="td_increases_power">Augmente la Puissance</td></tr>
-            <tr><td>Endurance (Terre)</td><td data-i18n="td_minigame_rhythm">Mini-jeu Rythme</td><td data-i18n="td_stamina_boss">Augmente les dégâts contre le Boss</td><td data-i18n="td_increases_power">Augmente la Puissance</td></tr>
-            <tr><td>Magie (Eau)</td><td data-i18n="td_minigame_arcane">Mini-jeu Arcane</td><td data-i18n="td_magic_boss">Augmente les dégâts contre le Boss</td><td data-i18n="td_increases_power">Augmente la Puissance</td></tr>
+            <tr><td data-i18n="stat_crit_fire">Critique (Feu)</td><td data-i18n="td_minigame_reflex">Mini-jeu Réflexe</td><td data-i18n="td_crit_boss">Augmente les dégâts contre le Boss</td><td data-i18n="td_increases_power">Augmente la Puissance</td></tr>
+            <tr><td data-i18n="stat_speed_wind">Vitesse (Vent)</td><td data-i18n="td_minigame_memory">Mini-jeu Mémoire</td><td data-i18n="td_speed_boss">Augmente les dégâts contre le Boss</td><td data-i18n="td_increases_power">Augmente la Puissance</td></tr>
+            <tr><td data-i18n="stat_stamina_earth">Endurance (Terre)</td><td data-i18n="td_minigame_rhythm">Mini-jeu Rythme</td><td data-i18n="td_stamina_boss">Augmente les dégâts contre le Boss</td><td data-i18n="td_increases_power">Augmente la Puissance</td></tr>
+            <tr><td data-i18n="stat_magic_water">Magie (Eau)</td><td data-i18n="td_minigame_arcane">Mini-jeu Arcane</td><td data-i18n="td_magic_boss">Augmente les dégâts contre le Boss</td><td data-i18n="td_increases_power">Augmente la Puissance</td></tr>
           </table>
           <p data-i18n="p_formulas_simplified">Formules simplifiées :</p>
           <p data-i18n="p_formula_boss_damage"><strong>Dégâts Boss</strong> = (Critique (Feu) + Magie (Eau) + Endurance (Terre) + Vitesse (Vent)) × Bien-être — même principe que la Puissance Donjon. Le résultat final varie légèrement à chaque attaque (±15%) pour garder du suspense.</p>
@@ -289,7 +289,7 @@
     <div class="card" id="species-select-card" style="display:none;">
       <h2 data-i18n="h2_choose_moltchi">Choisis ton Moltchi</h2>
       <p data-i18n="p_no_inspiration" style="margin-top:-4px;">Pas d'inspiration ? Laisse le hasard choisir pour toi.</p>
-      <button id="btn-surprise-species" style="margin-bottom:14px;">🎲 Surprends-moi</button>
+      <button id="btn-surprise-species" data-i18n="btn_surprise" style="margin-bottom:14px;">🎲 Surprends-moi</button>
       <div class="species-grid" id="species-grid"></div>
     </div>
 
@@ -334,10 +334,10 @@
               </div>
             </div>
 
-            <div class="companion-stat-corner corner-stat-tl" style="--chip-accent:var(--ember-bright);"><div class="stat-icon">🔥</div><div class="val" id="crit-val">0</div><div class="lbl">Critique</div></div>
-            <div class="companion-stat-corner corner-stat-tr" style="--chip-accent:var(--blue);"><div class="stat-icon">💨</div><div class="val" id="dodge-val">0</div><div class="lbl">Vitesse</div></div>
-            <div class="companion-stat-corner corner-stat-bl" style="--chip-accent:#5fbf9a;"><div class="stat-icon">🪨</div><div class="val" id="stamina-val">0</div><div class="lbl">Endurance</div></div>
-            <div class="companion-stat-corner corner-stat-br" style="--chip-accent:var(--violet);"><div class="stat-icon">💧</div><div class="val" id="magic-val">0</div><div class="lbl">Magie</div></div>
+            <div class="companion-stat-corner corner-stat-tl" style="--chip-accent:var(--ember-bright);"><div class="stat-icon">🔥</div><div class="val" id="crit-val">0</div><div class="lbl" data-i18n="stat_crit_short">Critique</div></div>
+            <div class="companion-stat-corner corner-stat-tr" style="--chip-accent:var(--blue);"><div class="stat-icon">💨</div><div class="val" id="dodge-val">0</div><div class="lbl" data-i18n="stat_speed_short">Vitesse</div></div>
+            <div class="companion-stat-corner corner-stat-bl" style="--chip-accent:#5fbf9a;"><div class="stat-icon">🪨</div><div class="val" id="stamina-val">0</div><div class="lbl" data-i18n="stat_stamina_short">Endurance</div></div>
+            <div class="companion-stat-corner corner-stat-br" style="--chip-accent:var(--violet);"><div class="stat-icon">💧</div><div class="val" id="magic-val">0</div><div class="lbl" data-i18n="stat_magic_short">Magie</div></div>
 
             <div class="companion-bottom-sheet">
               <div class="vitals-row">
@@ -370,9 +370,9 @@
       <div class="backpack-stitch"></div>
       <h2 data-i18n="h2_backpack">Sac à dos</h2>
       <p class="backpack-coin-balance" style="text-align:center;font-family:var(--font-mono);font-size:13px;color:var(--gold);margin-top:-6px;margin-bottom:10px;">🪙 <span id="backpack-moltcoin-balance">0</span> Moltcoins</p>
-      <button id="btn-auto-equip" style="margin-bottom:10px;">⚡ Équiper automatiquement le meilleur</button>
+      <button id="btn-auto-equip" data-i18n="btn_auto_equip" style="margin-bottom:10px;">⚡ Équiper automatiquement le meilleur</button>
       <div id="consumables-section" style="display:none;margin-bottom:14px;">
-        <h3 style="color:var(--gold);font-size:13px;margin-bottom:6px;">🍬 Consommables</h3>
+        <h3 data-i18n="h3_consumables" style="color:var(--gold);font-size:13px;margin-bottom:6px;">🍬 Consommables</h3>
         <ul class="inventory-list backpack-pockets" id="consumables-list"></ul>
       </div>
       <ul class="inventory-list backpack-pockets" id="inventory-list"><li>Aucun objet pour l'instant.</li></ul>
@@ -383,8 +383,8 @@
       <p data-i18n="p_recovery_code_hint" style="font-size:11px;color:var(--ivory-dim);margin:0 0 8px;">Ce code identifie ta progression sur cet appareil. Note-le pour la retrouver depuis un autre navigateur ou un autre PC.</p>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <code id="recovery-code-display" style="background:var(--moss-950);padding:6px 10px;border-radius:4px;font-size:11px;user-select:all;flex:1;min-width:180px;word-break:break-all;filter:blur(5px);transition:filter 0.15s;"></code>
-        <button id="btn-toggle-recovery-visibility" style="font-size:11px;padding:6px 10px;">👁️ Afficher</button>
-        <button id="btn-copy-recovery" style="font-size:11px;padding:6px 10px;">📋 Copier</button>
+        <button id="btn-toggle-recovery-visibility" data-i18n="btn_show" style="font-size:11px;padding:6px 10px;">👁️ Afficher</button>
+        <button id="btn-copy-recovery" data-i18n="btn_copy" style="font-size:11px;padding:6px 10px;">📋 Copier</button>
       </div>
       <p id="recovery-status" style="font-size:11px;color:var(--gold);margin:6px 0 0;"></p>
     </div>
@@ -392,10 +392,10 @@
     <div class="card" id="danger-zone-card" style="display:none;border-color:var(--danger);">
       <h2 style="color:var(--danger);" data-i18n="h2_danger_zone">Zone dangereuse</h2>
       <p data-i18n="p_abandon_warning">Abandonner ton Moltchi le supprime <strong>définitivement</strong> : niveau, stats, inventaire, race, tout repart à zéro. Tu recommenceras par un choix de race, comme au premier lancement. Ton pseudo et le Boss Mondial ne sont pas affectés.</p>
-      <button id="btn-abandon-toggle" style="border-color:var(--danger);">💀 Abandonner ce Moltchi</button>
+      <button id="btn-abandon-toggle" data-i18n="btn_abandon" style="border-color:var(--danger);">💀 Abandonner ce Moltchi</button>
       <div class="actions" id="abandon-confirm-row" style="display:none;margin-top:12px;">
         <input type="text" id="abandon-input" placeholder="Tape ADIEU pour confirmer" style="flex:1;min-width:160px;padding:10px 12px;border-radius:4px;border:1px solid var(--danger);background:var(--moss-950);color:var(--ivory);font-family:var(--font-body);font-size:13px;">
-        <button id="btn-abandon-confirm" style="background:var(--danger);border-color:var(--danger);">Confirmer l'abandon</button>
+        <button id="btn-abandon-confirm" data-i18n="btn_abandon_confirm" style="background:var(--danger);border-color:var(--danger);">Confirmer l'abandon</button>
       </div>
     </div>
   </div>
@@ -406,10 +406,10 @@
       <h2 data-i18n="h2_training">Entraînement actif</h2>
       <div class="attempts-left" id="training-attempts" style="margin-bottom:12px;"></div>
       <div class="minigame-grid">
-        <div class="minigame-card"><div class="icon">🔥</div><div class="name">Réflexe</div><div class="stat-tag">→ Critique (Feu)</div><button id="btn-start-reflex" class="primary">Jouer</button></div>
-        <div class="minigame-card"><div class="icon">💨</div><div class="name">Mémoire</div><div class="stat-tag">→ Vitesse (Vent)</div><button id="btn-start-memory" class="primary">Jouer</button></div>
-        <div class="minigame-card"><div class="icon">🪨</div><div class="name">Rythme</div><div class="stat-tag">→ Endurance (Terre)</div><button id="btn-start-rhythm" class="primary">Jouer</button></div>
-        <div class="minigame-card"><div class="icon">💧</div><div class="name">Arcane</div><div class="stat-tag">→ Magie (Eau)</div><button id="btn-start-arcane" class="primary">Jouer</button></div>
+        <div class="minigame-card"><div class="icon">🔥</div><div class="name" data-i18n="mg_reflex_name">Réflexe</div><div class="stat-tag" data-i18n="stat_crit_fire_arrow">→ Critique (Feu)</div><button id="btn-start-reflex" class="primary" data-i18n="btn_play">Jouer</button></div>
+        <div class="minigame-card"><div class="icon">💨</div><div class="name" data-i18n="mg_memory_name">Mémoire</div><div class="stat-tag" data-i18n="stat_speed_wind_arrow">→ Vitesse (Vent)</div><button id="btn-start-memory" class="primary" data-i18n="btn_play">Jouer</button></div>
+        <div class="minigame-card"><div class="icon">🪨</div><div class="name" data-i18n="mg_rhythm_name">Rythme</div><div class="stat-tag" data-i18n="stat_stamina_earth_arrow">→ Endurance (Terre)</div><button id="btn-start-rhythm" class="primary" data-i18n="btn_play">Jouer</button></div>
+        <div class="minigame-card"><div class="icon">💧</div><div class="name" data-i18n="mg_arcane_name">Arcane</div><div class="stat-tag" data-i18n="stat_magic_water_arrow">→ Magie (Eau)</div><button id="btn-start-arcane" class="primary" data-i18n="btn_play">Jouer</button></div>
       </div>
     </div>
     <div class="card" id="minigame-area" style="display:none;">
@@ -423,12 +423,12 @@
     <div class="card">
       <h2 data-i18n="h2_wyrm_tower">Tour du Wyrm</h2>
 <img src="media/wyrmtower.png" style="display: block; margin: 0 auto;">
-      <div class="floor-display"><div class="floor-num" id="floor-num">1</div><div class="floor-label">Étage actuel</div></div>
+      <div class="floor-display"><div class="floor-num" id="floor-num">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
       <div class="dungeon-reward-info" id="dungeon-reward-info" style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);text-align:center;margin-bottom:12px;"></div>
       <div class="power-compare">
-        <div class="power-side"><div class="val" id="your-power" style="color:var(--gold);">0</div><div class="lbl">Ta puissance</div></div>
+        <div class="power-side"><div class="val" id="your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
         <div class="power-vs">VS</div>
-        <div class="power-side"><div class="val" id="floor-power" style="color:var(--ember-bright);">0</div><div class="lbl">Défi de l'étage</div></div>
+        <div class="power-side"><div class="val" id="floor-power" style="color:var(--ember-bright);">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
       </div>
       <div class="attempts-row">
         <div><div class="attempts-left" id="dungeon-attempts-text"></div><div class="pip-row" id="dungeon-pip-row"></div>
@@ -441,17 +441,17 @@
     <div class="card" id="corrupt-locked-card" style="text-align:center;">
       <h2 data-i18n="h2_corrupt_locked">🔒 Sanctuaire Corrompu</h2>
       <p id="corrupt-req-text" style="font-family:var(--font-mono);font-size:13px;margin-top:10px;"></p>
-      <button id="btn-unlock-corrupt" class="primary big" style="margin-top:14px;">Débloquer — 🪙 2000 Moltcoins</button>
+      <button id="btn-unlock-corrupt" class="primary big" data-i18n="btn_unlock_corrupt" style="margin-top:14px;">Débloquer — 🪙 2000 Moltcoins</button>
     </div>
     <div class="card" id="corrupt-play-card" style="display:none;">
       <h2 data-i18n="h2_corrupt">Sanctuaire Corrompu</h2>
 <img src="media/sanctuaire.png" style="display: block; margin: 0 auto;">
-      <div class="floor-display"><div class="floor-num" id="corrupt-floor-num" style="color:#b060e0;">1</div><div class="floor-label">Étage actuel</div></div>
+      <div class="floor-display"><div class="floor-num" id="corrupt-floor-num" style="color:#b060e0;">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
       <div class="dungeon-reward-info" id="corrupt-reward-info" style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);text-align:center;margin-bottom:12px;"></div>
       <div class="power-compare">
-        <div class="power-side"><div class="val" id="corrupt-your-power" style="color:var(--gold);">0</div><div class="lbl">Ta puissance</div></div>
+        <div class="power-side"><div class="val" id="corrupt-your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
         <div class="power-vs">VS</div>
-        <div class="power-side"><div class="val" id="corrupt-floor-power" style="color:#b060e0;">0</div><div class="lbl">Défi de l'étage</div></div>
+        <div class="power-side"><div class="val" id="corrupt-floor-power" style="color:#b060e0;">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
       </div>
       <div class="attempts-row">
         <div><div class="attempts-left" id="corrupt-attempts-text"></div><div class="pip-row" id="corrupt-pip-row"></div>
@@ -464,18 +464,18 @@
     <div class="card" id="noyau-locked-card" style="text-align:center;">
       <h2 data-i18n="h2_noyau_locked">🔒 Noyau Primordial</h2>
       <p id="noyau-req-text" style="font-family:var(--font-mono);font-size:13px;margin-top:10px;"></p>
-      <button id="btn-unlock-noyau" class="primary big" style="margin-top:14px;">Débloquer — 🪙 2000 Moltcoins</button>
+      <button id="btn-unlock-noyau" class="primary big" data-i18n="btn_unlock_noyau" style="margin-top:14px;">Débloquer — 🪙 2000 Moltcoins</button>
     </div>
     <div class="card" id="noyau-play-card" style="display:none;">
       <h2 data-i18n="h2_noyau">Noyau Primordial</h2>
 <img src="media/noyau.png" style="display: block; margin: 0 auto;">
-      <div class="floor-display"><div class="floor-num" id="noyau-floor-num" style="color:#e0c060;">1</div><div class="floor-label">Étage actuel</div></div>
+      <div class="floor-display"><div class="floor-num" id="noyau-floor-num" style="color:#e0c060;">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
       <p id="noyau-affinity-text" style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);text-align:center;margin:-4px 0 10px;"></p>
       <div class="dungeon-reward-info" id="noyau-reward-info" style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);text-align:center;margin-bottom:12px;"></div>
       <div class="power-compare">
-        <div class="power-side"><div class="val" id="noyau-your-power" style="color:var(--gold);">0</div><div class="lbl">Ta puissance</div></div>
+        <div class="power-side"><div class="val" id="noyau-your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
         <div class="power-vs">VS</div>
-        <div class="power-side"><div class="val" id="noyau-floor-power" style="color:#e0c060;">0</div><div class="lbl">Défi de l'étage</div></div>
+        <div class="power-side"><div class="val" id="noyau-floor-power" style="color:#e0c060;">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
       </div>
       <div class="attempts-row">
         <div><div class="attempts-left" id="noyau-attempts-text"></div><div class="pip-row" id="noyau-pip-row"></div>
@@ -554,7 +554,7 @@
       <div class="bar-track" style="height:12px;"><div class="bar-fill fill-xp" id="bp-xp-bar" style="width:0%"></div></div>
       <div id="bp-premium-banner" class="bp-premium-banner">
         <div>
-          <div class="bp-premium-title">✦ Pass Premium</div>
+          <div class="bp-premium-title" data-i18n="bp_premium_title">✦ Pass Premium</div>
           <div class="bp-premium-sub" id="bp-premium-sub"></div>
         </div>
         <div class="bp-premium-actions" id="bp-premium-actions"></div>
@@ -574,13 +574,13 @@
       <p data-i18n="p_chests_intro">Ouvre jusqu'à <strong>3 coffres par jour</strong> en regardant une courte publicité. Chaque coffre rapporte des Moltcoins 🪙, avec une chance de bonbon consommable ou même d'un Moltyx très rare.</p>
       <p data-i18n="p_chests_reset" style="font-size:12px;color:var(--ivory-dim);margin-top:-8px;">Se réinitialisent chaque jour</p>
       <div class="attempts-left" id="chests-remaining-text" style="text-align:center;margin-top:10px;"></div>
-      <p id="chest-adblock-warning" style="display:none;text-align:center;color:var(--danger);font-size:13px;font-weight:600;background:rgba(122,43,43,0.15);border:1px solid var(--danger);border-radius:6px;padding:10px;margin:10px 0;">
+      <p id="chest-adblock-warning" data-i18n="p_chest_adblock" style="display:none;text-align:center;color:var(--danger);font-size:13px;font-weight:600;background:rgba(122,43,43,0.15);border:1px solid var(--danger);border-radius:6px;padding:10px;margin:10px 0;">
         🚫 Bloqueur de publicités détecté — désactive-le pour ce site (ou mets Moltchi en liste blanche) pour pouvoir ouvrir des coffres.
       </p>
       <div class="chest-row" id="chest-row" style="display:flex;justify-content:center;gap:18px;margin:16px 0;flex-wrap:wrap;"></div>
       <div id="chest-watch-row" style="display:none;text-align:center;margin-top:10px;">
         <p id="chest-watch-status" style="font-size:13px;color:var(--gold);"></p>
-        <button id="btn-chest-claim" class="primary" style="display:none;">🎉 Réclamer la récompense</button>
+        <button id="btn-chest-claim" class="primary" data-i18n="btn_chest_claim" style="display:none;">🎉 Réclamer la récompense</button>
       </div>
       <div class="log" id="chest-log"></div>
     </div>
@@ -608,16 +608,16 @@
     <div class="card">
       <h2 data-i18n="h2_treasure_hunt">Chasse aux trésors</h2>
       <p data-i18n="p_treasure_intro">Dépense des <strong>points d'action</strong> pour fouiller et récupérer des <strong>Moltcoins</strong> 🪙, la monnaie de Moltchi. De très rares fouilles peuvent aussi révéler un objet du Recueil.</p>
-      <div class="floor-display"><div class="floor-num" id="moltcoin-balance" style="color:var(--gold);">0</div><div class="floor-label">Moltcoins 🪙</div></div>
-      <div class="attempts-left" style="text-align:center;margin-top:14px;">Points d'action</div>
+      <div class="floor-display"><div class="floor-num" id="moltcoin-balance" style="color:var(--gold);">0</div><div class="floor-label" data-i18n="lbl_moltcoins">Moltcoins 🪙</div></div>
+      <div class="attempts-left" data-i18n="lbl_action_points" style="text-align:center;margin-top:14px;">Points d'action</div>
       <div class="pip-row" id="treasure-pip-row" style="margin:8px 0;justify-content:center;"></div>
       <div class="attempts-left" id="treasure-recharge-text" style="text-align:center;margin-bottom:12px;"></div>
       <div class="attempts-row">
         <div></div>
-        <button id="btn-dig" class="primary big">⛏️ Fouiller (1 PA)</button>
+        <button id="btn-dig" class="primary big" data-i18n="btn_dig">⛏️ Fouiller (1 PA)</button>
       </div>
       <div class="log" id="treasure-log"></div>
-      <div class="attempts-left" style="margin-top:8px;">Les 10 dernières fouilles sont affichées et conservés.</div>
+      <div class="attempts-left" data-i18n="p_treasure_history" style="margin-top:8px;">Les 10 dernières fouilles sont affichées et conservés.</div>
     </div>
   </div>
 
@@ -664,7 +664,7 @@
   <div id="chat-bubble-window" class="chat-bubble-window">
     <div class="chat-bubble-tail"></div>
     <div class="chat-bubble-header">
-      <span>💬 Tchat mondial</span>
+      <span data-i18n="chat_title">💬 Tchat mondial</span>
       <span id="chat-bubble-close" class="chat-bubble-close">✕</span>
     </div>
     <div class="log" id="chat-log"></div>
