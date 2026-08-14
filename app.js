@@ -212,8 +212,8 @@ const I18N_EN = {
   td_magic_boss: 'Increases damage against the Boss',
   td_increases_power: 'Increases Power',
   p_formulas_simplified: 'Simplified formulas:',
-  p_formula_boss_damage: '<strong>Boss Damage</strong> = (Crit (Fire) + Magic (Water) + Endurance (Earth) + Speed (Wind)) × Wellbeing — same principle as Dungeon Power. The final result varies slightly on each attack (±15%) to keep things suspenseful.',
-  p_formula_dungeon_power: '<strong>Dungeon Power</strong> = (Level + Crit (Fire) + Speed (Wind) + Endurance (Earth) + Magic (Water)) × Wellbeing. Each Dungeon floor requires more Power (roughly +5% per floor — same principle for both the Wyrm Tower and the Corrupt Sanctuary, which restarts from the Tower\'s floor-100 challenge level, with much stronger items to compensate for the new scale).',
+  p_formula_boss_damage: '<strong>Boss Damage</strong> = (Crit (Fire) + Magic (Water) + Stamina (Earth) + Speed (Wind)) × Wellbeing — same principle as Dungeon Power. The final result varies slightly on each attack (±15%) to keep things suspenseful.',
+  p_formula_dungeon_power: '<strong>Dungeon Power</strong> = (Level + Crit (Fire) + Speed (Wind) + Stamina (Earth) + Magic (Water)) × Wellbeing. Each Dungeon floor requires more Power (roughly +5% per floor — same principle for both the Wyrm Tower and the Corrupt Sanctuary, which restarts from the Tower\'s floor-100 challenge level, with much stronger items to compensate for the new scale).',
   p_daily_actions_summary: '5 care actions per day (Feed/Play/Sleep combined) · 8 training attempts per day total, to spend however you like.',
   p_boss_ranking_reset: 'The ranking resets every week. Your rank at reset time determines your reward.',
   p_worldshard_chance: 'The chance to obtain the World Shard only applies if the Boss was defeated at least once during the week.',
@@ -256,7 +256,7 @@ const I18N_EN = {
   btn_restore: 'Restore',
   stat_crit_fire: 'Crit (Fire)',
   stat_speed_wind: 'Speed (Wind)',
-  stat_stamina_earth: 'Endurance (Earth)',
+  stat_stamina_earth: 'Stamina (Earth)',
   stat_magic_water: 'Magic (Water)',
   mg_reflex_name: 'Reflex',
   mg_memory_name: 'Memory',
@@ -264,7 +264,7 @@ const I18N_EN = {
   mg_arcane_name: 'Arcane',
   stat_crit_fire_arrow: '→ Crit (Fire)',
   stat_speed_wind_arrow: '→ Speed (Wind)',
-  stat_stamina_earth_arrow: '→ Endurance (Earth)',
+  stat_stamina_earth_arrow: '→ Stamina (Earth)',
   stat_magic_water_arrow: '→ Magic (Water)',
   btn_surprise: '🎲 Surprise me',
   btn_auto_equip: '⚡ Auto-equip the best',
@@ -288,7 +288,7 @@ const I18N_EN = {
   chat_title: '💬 World Chat',
   stat_crit_short: 'Crit',
   stat_speed_short: 'Speed',
-  stat_stamina_short: 'Endurance',
+  stat_stamina_short: 'Stamina',
   stat_magic_short: 'Magic',
 };
 
@@ -798,7 +798,7 @@ const ITEM_DB = [
   {id:'talisman_ombreux',   name:'Talisman Ombreux',           name_en:'Shadow Talisman',         rarity:'rare',      stat:'dodge',   value:55, minFloor:5},
   {id:'sceau_arcane',       name:'Sceau Arcane',               name_en:'Arcane Seal',             rarity:'rare',      stat:'magic',   value:55, minFloor:5},
   {id:'griffe_du_wyrm',     name:'Griffe du Wyrm',             name_en:'Wyrm\'s Claw',            rarity:'epic',      stat:'crit',    value:150, minFloor:15},
-  {id:'plaque_antique',     name:'Plaque d\'Endurance Antique',name_en:'Ancient Endurance Plate', rarity:'epic',      stat:'stamina', value:150, minFloor:15},
+  {id:'plaque_antique',     name:'Plaque d\'Endurance Antique',name_en:'Ancient Stamina Plate', rarity:'epic',      stat:'stamina', value:150, minFloor:15},
   {id:'voile_derobade',     name:'Voile de Dérobade',          name_en:'Veil of Evasion',         rarity:'epic',      stat:'dodge',   value:150, minFloor:15},
   {id:'coeur_arcanique',    name:'Cœur Arcanique',             name_en:'Arcane Heart',            rarity:'epic',      stat:'magic',   value:150, minFloor:15},
   {id:'couronne_cendres',   name:'Couronne de Cendres',        name_en:'Crown of Ashes',          rarity:'legendary', stat:'crit',    value:500, minFloor:30},
@@ -892,7 +892,7 @@ const UNIQUE_ITEM_DB = [
 const SPECIES = {
   Braisien: { name:'Braisien', icon:'🔥', video:'media/braisien.mp4', eatVideo:'media/braisien-eat.mp4', playVideo:'media/braisien-play.mp4', sleepVideo:'media/braisien-sleep.mp4', stage3Video:null, stage3Image:null, passiveStat:'crit', passiveLabel:'+20% de gain en Critique (Feu)', passiveLabel_en:'+20% Crit (Fire) gained from training',
     talent:'Instinct féroce — +8% de dégâts infligés au Boss Mondial', talent_en:'Feral Instinct — +8% damage dealt to the World Boss' },
-  Ptimousse: { name:'Ptimousse', icon:'🛡️', video:'media/ptimousse.mp4', image:'media/Ptimousse.png', eatVideo:'media/ptimousse-eat.mp4', playVideo:'media/ptimousse-play.mp4',sleepVideo:'media/ptimousse-sleep.mp4', stage3Video:null, stage3Image:null, passiveStat:'stamina', passiveLabel:'+20% de gain en Endurance (Terre)', passiveLabel_en:'+20% Endurance (Earth) gained from training',
+  Ptimousse: { name:'Ptimousse', icon:'🛡️', video:'media/ptimousse.mp4', image:'media/Ptimousse.png', eatVideo:'media/ptimousse-eat.mp4', playVideo:'media/ptimousse-play.mp4',sleepVideo:'media/ptimousse-sleep.mp4', stage3Video:null, stage3Image:null, passiveStat:'stamina', passiveLabel:'+20% de gain en Endurance (Terre)', passiveLabel_en:'+20% Stamina (Earth) gained from training',
     talent:'Carapace — le Bien-être se dégrade 30% plus lentement', talent_en:'Carapace — Wellbeing decays 30% slower' },
   Luminel: { name:'Luminel', icon:'💨', video:'media/luminel.mp4', image:'media/Luminel.png', eatVideo:'media/luminel-eat.mp4', playVideo:'media/luminel-play.mp4', sleepVideo:'media/luminel-sleep.mp4', stage3Video:null, stage3Image:null, passiveStat:'magic', passiveLabel:'+20% de gain en Magie (Eau)', passiveLabel_en:'+20% Magic (Water) gained from training',
     talent:'Souffle d\'aile — 1 attaque supplémentaire contre le Boss Mondial chaque jour', talent_en:'Wingbeat — 1 extra attack against the World Boss every day' },
@@ -1560,7 +1560,7 @@ const EQUIP_STATS = ['crit','dodge','stamina','magic'];
 // l'affichage (fiche créature, mini-jeux, tooltips d'objets, bonus d'espèce) en dépend.
 // ============================================================
 const STAT_LABEL = {crit:'Critique (Feu)', dodge:'Vitesse (Vent)', stamina:'Endurance (Terre)', magic:'Magie (Eau)'};
-const STAT_LABEL_EN = {crit:'Crit (Fire)', dodge:'Speed (Wind)', stamina:'Endurance (Earth)', magic:'Magic (Water)'};
+const STAT_LABEL_EN = {crit:'Crit (Fire)', dodge:'Speed (Wind)', stamina:'Stamina (Earth)', magic:'Magic (Water)'};
 const STAT_ICON = {crit:'🔥', dodge:'💨', stamina:'🪨', magic:'💧'};
 const STAT_ACCENT = {crit:'var(--ember-bright)', dodge:'var(--blue)', stamina:'#5fbf9a', magic:'var(--violet)'};
 
