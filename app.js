@@ -1567,7 +1567,7 @@ const STAT_ICON = {crit:'🔥', dodge:'💨', stamina:'🪨', magic:'💧'};
 const STAT_ACCENT = {crit:'var(--ember-bright)', dodge:'var(--blue)', stamina:'#5fbf9a', magic:'var(--violet)'};
 
 // XP gagnée en vainquant un étage donné du Donjon — formule explicite, affichée dans l'UI.
-function dungeonXP(floor){ return 15 + floor; }
+function dungeonXP(floor){ return floor <= 100 ? 15 + floor : 15; } // au-delà de l'étage 100, retour à la base fixe (15) — le Sanctuaire Corrompu prend le relais côté XP. ⚠️ DOIT rester identique à perform-action.ts.
 // Un objet ne tombe que tous les 5 étages (5, 10, 15…).
 function isLootFloor(floor){ return floor % 5 === 0; }
 
