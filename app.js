@@ -286,6 +286,8 @@ const I18N_EN = {
   btn_dig: '⛏️ Dig (1 AP)',
   p_treasure_history: 'The last 10 digs are shown and kept.',
   chat_title: '💬 World Chat',
+  lbl_wellbeing: 'Wellbeing',
+  lbl_est_damage: 'Est. Damage',
   stat_crit_short: 'Crit',
   stat_speed_short: 'Speed',
   stat_stamina_short: 'Stamina',
@@ -1927,7 +1929,9 @@ function renderCreature(c){
   $('est-damage-val').textContent = estimatedDamage(c, boss).toLocaleString();
 
   const careLeft = careAttemptsLeft(c);
-  $('care-attempts-text').textContent = careLeft > 0 ? `${careLeft} action${careLeft>1?'s':''} de soin restante${careLeft>1?'s':''} aujourd'hui` : `Plus d'action de soin aujourd'hui — reviens demain`;
+  $('care-attempts-text').textContent = careLeft > 0
+    ? (currentLang==='en' ? `${careLeft} care action${careLeft>1?'s':''} left today` : `${careLeft} action${careLeft>1?'s':''} de soin restante${careLeft>1?'s':''} aujourd'hui`)
+    : (currentLang==='en' ? 'No more care actions today — come back tomorrow' : `Plus d'action de soin aujourd'hui — reviens demain`);
   const carePipRow = $('care-pip-row'); carePipRow.innerHTML = '';
   const careUsedToday = c.careDay === todayKey() ? c.careUsed : 0;
   for(let i=0;i<CARE_MAX;i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < careUsedToday ? 'used' : 'available'); carePipRow.appendChild(pip); }
@@ -1937,7 +1941,9 @@ function renderCreature(c){
 
   const attemptsMax = maxBossAttacks(c);
   const attemptsLeft = c.lastAttackDay === todayKey() ? Math.max(0, attemptsMax - c.attacksToday) : attemptsMax;
-  $('attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} attaque${attemptsLeft>1?'s':''} restante${attemptsLeft>1?'s':''} aujourd'hui` : `Reviens demain pour attaquer à nouveau`;
+  $('attempts-text').textContent = attemptsLeft > 0
+    ? (currentLang==='en' ? `${attemptsLeft} attack${attemptsLeft>1?'s':''} left today` : `${attemptsLeft} attaque${attemptsLeft>1?'s':''} restante${attemptsLeft>1?'s':''} aujourd'hui`)
+    : (currentLang==='en' ? 'Come back tomorrow to attack again' : `Reviens demain pour attaquer à nouveau`);
   $('btn-attack').disabled = attemptsLeft === 0;
   const pipRow = $('pip-row'); pipRow.innerHTML = '';
   const used = c.lastAttackDay === todayKey() ? c.attacksToday : 0;
@@ -2052,11 +2058,16 @@ function renderCreature(c){
     };
   }
   const eq = equippedBonus(c);
-  const parts = EQUIP_STATS.filter(s=>eq[s] > 0).map(s=>`+${eq[s]} ${STAT_LABEL[s]}`);
+  const statLabelForSummary = currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL;
+  const parts = EQUIP_STATS.filter(s=>eq[s] > 0).map(s=>`+${eq[s]} ${statLabelForSummary[s]}`);
   const uniqueEquippedCount = c.inventory.filter(i=>i.equipped && i.rarity==='unique').length;
-  const uniqueSummary = uniqueEquippedCount > 0 ? ` · ${uniqueEquippedCount} Moltyx actif${uniqueEquippedCount>1?'s':''}` : '';
+  const uniqueSummary = uniqueEquippedCount > 0
+    ? (currentLang==='en' ? ` · ${uniqueEquippedCount} Moltyx active` : ` · ${uniqueEquippedCount} Moltyx actif${uniqueEquippedCount>1?'s':''}`)
+    : '';
   $('equip-bonus-summary').textContent = (parts.length
-    ? `Bonus d'équipement actif (${c.inventory.filter(i=>i.equipped && i.rarity!=='unique').length}/${MAX_EQUIP}) : ${parts.join(' · ')}`
+    ? (currentLang==='en'
+        ? `Active equipment bonus (${c.inventory.filter(i=>i.equipped && i.rarity!=='unique').length}/${MAX_EQUIP}): ${parts.join(' · ')}`
+        : `Bonus d'équipement actif (${c.inventory.filter(i=>i.equipped && i.rarity!=='unique').length}/${MAX_EQUIP}) : ${parts.join(' · ')}`)
     : '') + uniqueSummary;
   renderTrainingPanel(c);
   renderDungeonPanel(c);
@@ -3212,10 +3223,12 @@ function renderTreasurePanel(c){
   for(let i=0;i<cap;i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < c.treasureAP ? 'available' : 'used'); pipRow.appendChild(pip); }
   const rechargeEl = $('treasure-recharge-text');
   if(c.treasureAP >= cap){
-    rechargeEl.textContent = "Points d'action au maximum.";
+    rechargeEl.textContent = currentLang==='en' ? 'Action Points at maximum.' : "Points d'action au maximum.";
   } else {
     const msUntilNext = TREASURE_AP_REGEN_MS - (Date.now() - c.treasureAPLastTick);
-    rechargeEl.textContent = `Prochain point d'action dans ${formatMinutes(msUntilNext)} (1 par heure).`;
+    rechargeEl.textContent = currentLang==='en'
+      ? `Next Action Point in ${formatMinutes(msUntilNext)} (1 per hour).`
+      : `Prochain point d'action dans ${formatMinutes(msUntilNext)} (1 par heure).`;
   }
   $('btn-dig').disabled = c.treasureAP <= 0;
 
