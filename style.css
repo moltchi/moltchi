@@ -1,4 +1,4 @@
-  /* ============================================================
+/* ============================================================
      ============ VARIABLES DE THÈME (couleurs, polices) ============
      ============================================================ */
   :root{
@@ -257,10 +257,10 @@
   .companion-stat-corner .val{font-family:var(--font-display);font-size:15px;color:var(--chip-accent,var(--ivory));font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.9);}
   .companion-stat-corner .lbl{font-family:var(--font-mono);font-size:8px;color:var(--ivory-dim);text-transform:uppercase;letter-spacing:0.04em;
     text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 1px 5px rgba(0,0,0,.9);}
-  .corner-stat-tl{top:88px;left:16px;}
-  .corner-stat-tr{top:88px;right:16px;align-items:flex-end;}
-  .corner-stat-bl{top:152px;left:16px;}
-  .corner-stat-br{top:152px;right:16px;align-items:flex-end;}
+  .corner-stat-tl{top:110px;left:16px;}
+  .corner-stat-tr{top:110px;right:16px;align-items:flex-end;}
+  .corner-stat-bl{top:174px;left:16px;}
+  .corner-stat-br{top:174px;right:16px;align-items:flex-end;}
 
   /* ---- Ornements de coin — prolongent la ligne du cadre plutôt que de flotter dessus ---- */
   .corner-ornament{position:absolute;width:26px;height:26px;z-index:3;pointer-events:none;
@@ -738,6 +738,9 @@
   .ach-badge-btn.active{background:linear-gradient(180deg,var(--gold-bright),var(--gold));border-color:var(--gold);color:var(--moss-950);font-weight:700;}
 
   /* Titre affiché sur la carte compagnon quand un badge de succès est actif */
+  /* Réserve toujours la même hauteur, badge actif ou non, pour que les stats en coin
+     (positionnées en absolu plus bas) ne bougent jamais selon l'état du titre. */
+  #active-badge-slot{min-height:20px;margin-top:2px;}
   .active-badge-pill{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-mono);
     font-size:9.5px;letter-spacing:0.04em;text-transform:uppercase;color:var(--gold);
     background:rgba(226,166,63,0.12);border:1px solid var(--gold);border-radius:10px;padding:2px 8px;margin-top:3px;}
@@ -786,8 +789,8 @@
     .companion-stat-corner .stat-icon{font-size:14px;}
     .companion-stat-corner .val{font-size:13px;}
     .companion-stat-corner .lbl{font-size:7px;}
-    .corner-stat-tl, .corner-stat-tr{top:72px;}
-    .corner-stat-bl, .corner-stat-br{top:132px;bottom:auto;}
+    .corner-stat-tl, .corner-stat-tr{top:92px;}
+    .corner-stat-bl, .corner-stat-br{top:152px;bottom:auto;}
     .companion-card .vitals-row{margin-top:18px;gap:8px;}
     .companion-card .vital-icon{font-size:11px;}
     .companion-card .bar-track{height:4px;}
@@ -820,8 +823,8 @@
   @media (max-width: 380px){
     .stat-grid{grid-template-columns:1fr 1fr;gap:6px;}
     .companion-frame-inner{min-height:400px;}
-    .corner-stat-tl, .corner-stat-tr{top:62px;}
-    .corner-stat-bl, .corner-stat-br{top:118px;bottom:auto;}
+    .corner-stat-tl, .corner-stat-tr{top:80px;}
+    .corner-stat-bl, .corner-stat-br{top:136px;bottom:auto;}
     .care-btn{padding:7px 2px;gap:4px;}
     .care-btn .care-label{font-size:9.5px;}
     .bp-tier-row{grid-template-columns:26px 1fr;}
