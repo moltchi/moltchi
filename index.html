@@ -223,6 +223,7 @@
       <div class="tab-parent" id="rewards-parent" data-i18n="tab_rewards">Récompenses <span class="caret">▾</span></div>
       <div class="tab-dropdown">
         <div class="tab" data-tab="battlepass" id="battlepass-tab" data-i18n="tab_battlepass">Pass Saisonnier</div>
+        <div class="tab" data-tab="achievements" data-i18n="tab_achievements">🏆 Succès</div>
         <div class="tab" data-tab="chests" id="chests-tab" data-i18n="tab_chests">Coffres</div>
         <div class="tab" data-tab="shop" id="shop-tab" data-i18n="tab_shop">Boutique</div>
       </div>
@@ -314,6 +315,7 @@
                     <div class="level-pill" id="level-pill">NIV. 1</div>
                   </div>
                   <div class="creature-meta" id="creature-meta">Nouveau-né · Ptimousse</div>
+                  <div id="active-badge-slot"></div>
                 </div>
                 <div class="companion-title-icons">
                   <div class="companion-corner" id="companion-corner-icon">
@@ -567,6 +569,15 @@
     </div>
   </div>
 
+  <!-- ACHIEVEMENTS PANEL -->
+  <div class="panel" id="panel-achievements">
+    <div class="card">
+      <h2 data-i18n="h2_achievements">🏆 Succès & Hauts Faits</h2>
+      <p data-i18n="p_achievements_intro">Des accomplissements permanents, indépendants du Pass Saisonnier — ils ne se réinitialisent jamais, même si tu abandonnes ton Moltchi. Choisis-en un comme titre affiché sur ta carte compagnon.</p>
+      <ul class="ach-grid" id="achievements-list"></ul>
+    </div>
+  </div>
+
   <!-- CHESTS PANEL -->
   <div class="panel" id="panel-chests">
     <div class="card">
@@ -676,6 +687,7 @@
     <p id="chat-cooldown-text" style="font-size:10px;margin:6px 0 0;"></p>
   </div>
   <div id="chat-bubble-btn" class="chat-bubble-btn">💬</div>
+  <div id="ach-toast-wrap" class="ach-toast-wrap"></div>
   </div>
 </div>
 

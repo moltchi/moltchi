@@ -15,6 +15,11 @@ const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Appelle la passerelle serveur unique (perform-action) pour toute action de jeu déjà migrée
 // (Entraînement pour l'instant). Le serveur revalide/borne tout, recalcule le résultat avec
 // les vraies formules, sauvegarde, et renvoie la créature à jour + le résultat de l'action.
+// État des succès du joueur (permanent, indépendant de `creature` — voir section
+// SUCCÈS / HAUTS FAITS plus bas). Mis à jour automatiquement à chaque appel serveur
+// qui en renvoie une version à jour, pour ne pas avoir à toucher chaque site d'appel.
+let achievements = null;
+
 async function performAction(action, payload){
   const res = await fetch(`${SUPABASE_URL}/functions/v1/perform-action`, {
     method: 'POST',
@@ -23,6 +28,10 @@ async function performAction(action, payload){
   });
   const data = await res.json();
   if(!res.ok) throw new Error(data.error || 'action refusée par le serveur');
+  if(data.achievements){
+    achievements = data.achievements;
+    if(data.newlyUnlocked && data.newlyUnlocked.length) showAchievementToasts(data.newlyUnlocked);
+  }
   return data;
 }
 
@@ -130,6 +139,7 @@ const I18N_EN = {
   tab_boss: 'World Boss',
   tab_rewards: 'Rewards',
   tab_battlepass: 'Season Pass',
+  tab_achievements: '🏆 Achievements',
   tab_chests: 'Chests',
   tab_shop: 'Shop',
   tab_codexgroup: 'Codex',
@@ -160,6 +170,8 @@ const I18N_EN = {
   h2_daily_quests: 'Daily quests',
   h2_weekly_quests: 'Weekly quests',
   h2_reward_tiers: 'Reward tiers',
+  h2_achievements: '🏆 Achievements & Milestones',
+  p_achievements_intro: 'Permanent accomplishments, independent from the Season Pass — they never reset, even if you abandon your Moltchi. Pick one as the title shown on your companion card.',
   h2_chests: '🎁 Chests',
   h2_shop: '🏪 Shop',
   h2_treasure_hunt: 'Treasure hunt',
@@ -724,7 +736,7 @@ document.addEventListener('click', (e) => {
 
 // Tant qu'aucun Moltchi n'est actif (œuf jamais choisi, ou abandonné), seuls
 // "Comment jouer ?" et "Créature" restent accessibles.
-const LOCKED_WITHOUT_CREATURE = ['training','dungeon','boss','codex','treasure','battlepass','quests','chests','shop'];
+const LOCKED_WITHOUT_CREATURE = ['training','dungeon','boss','codex','treasure','battlepass','quests','chests','shop','achievements'];
 function updateTabAccess(c){
   const hasCreature = !!(c && c.stage > 0);
   document.querySelectorAll('.tab').forEach(tab=>{
@@ -1356,6 +1368,98 @@ function bpRewardHTML(c, bp, t, track, reached){
   </div>`;
 }
 
+// ============================================================
+// ============ SUCCÈS / HAUTS FAITS (permanents) ============
+// Les CONDITIONS de déblocage (ACHIEVEMENTS.check) vivent côté serveur
+// (perform-action.ts / attack-boss.ts, seuls habilités à modifier l'état réel).
+// Ici, uniquement l'AFFICHAGE (icône, nom, description) — la source de vérité
+// sur ce qui est débloqué ou non reste toujours `achievements.unlocked` reçu du
+// serveur, jamais recalculée côté client.
+// ============================================================
+const ACHIEVEMENT_DISPLAY = {
+  first_legendary:  { icon:'🏆', name:'Premier Légendaire',        name_en:'First Legendary',      desc:'Obtiens ton premier objet légendaire.',                         desc_en:'Obtain your first legendary item.' },
+  first_unique:     { icon:'✨', name:'Éclat Trouvé',               name_en:'Shard Found',          desc:'Trouve ton premier Moltyx unique.',                             desc_en:'Find your first unique Moltyx.' },
+  floors_100:       { icon:'🗼', name:'Centurion',                  name_en:'Centurion',            desc:'Franchis 100 étages de donjon au total (tous donjons confondus).', desc_en:'Clear 100 dungeon floors in total (all dungeons combined).' },
+  floors_500:       { icon:'🏔️', name:'Grand Explorateur',          name_en:'Grand Explorer',       desc:'Franchis 500 étages de donjon au total.',                       desc_en:'Clear 500 dungeon floors in total.' },
+  boss_kills_10:    { icon:'⚔️', name:'Chasseur de Titans',         name_en:'Titan Hunter',         desc:'Participe à la mise à mort du Boss Mondial 10 fois.',           desc_en:'Land the killing blow on the World Boss 10 times.' },
+  boss_kills_50:    { icon:'👑', name:'Légende du Boss Mondial',    name_en:'World Boss Legend',    desc:'Participe à la mise à mort du Boss Mondial 50 fois.',           desc_en:'Land the killing blow on the World Boss 50 times.' },
+  moltcoins_10000:  { icon:'🪙', name:'Petit Fortuné',              name_en:'Small Fortune',        desc:'Gagne 10 000 Moltcoins au total, au fil de ta progression.',    desc_en:'Earn 10,000 Moltcoins in total over your progression.' },
+  treasure_100:     { icon:'⛏️', name:'Chercheur d\'Or',            name_en:'Gold Seeker',          desc:'Effectue 100 fouilles à la Chasse au trésor.',                  desc_en:'Complete 100 digs at the Treasure Hunt.' },
+  training_500:     { icon:'💪', name:'Discipline de Fer',          name_en:'Iron Discipline',      desc:'Termine 500 sessions d\'entraînement.',                          desc_en:'Complete 500 training sessions.' },
+  pass_complete:    { icon:'🎟️', name:'Maître de Saison',           name_en:'Season Master',        desc:'Termine le Pass Saisonnier (palier maximum).',                  desc_en:'Complete the Season Pass (max tier).' },
+  corrupt_unlocked: { icon:'🌑', name:'Éveil Corrompu',             name_en:'Corrupt Awakening',    desc:'Débloque le Sanctuaire Corrompu.',                              desc_en:'Unlock the Corrupted Sanctuary.' },
+  noyau_unlocked:   { icon:'🌀', name:'Convergence',                name_en:'Convergence',          desc:'Débloque le Noyau Primordial.',                                 desc_en:'Unlock the Primordial Core.' },
+};
+
+function showAchievementToasts(ids){
+  const wrap = $('ach-toast-wrap');
+  if(!wrap) return;
+  ids.forEach((id, idx) => {
+    const def = ACHIEVEMENT_DISPLAY[id];
+    if(!def) return;
+    setTimeout(() => {
+      const toast = document.createElement('div');
+      toast.className = 'ach-toast';
+      const name = currentLang==='en' ? def.name_en : def.name;
+      const title = currentLang==='en' ? 'Achievement unlocked' : 'Succès débloqué';
+      toast.innerHTML = `<span class="ach-icon">${def.icon}</span><span><div class="ach-toast-title">${title}</div><div class="ach-toast-name">${name}</div></span>`;
+      wrap.appendChild(toast);
+      setTimeout(() => toast.remove(), 5100);
+    }, idx * 400); // léger décalage si plusieurs succès tombent d'un coup, pour ne pas les superposer
+  });
+}
+
+function renderAchievementsPanel(c){
+  const list = $('achievements-list');
+  if(!list) return;
+  if(!achievements){ list.innerHTML = ''; return; }
+  list.innerHTML = '';
+  Object.entries(ACHIEVEMENT_DISPLAY).forEach(([id, def]) => {
+    const unlockedAt = achievements.unlocked[id];
+    const name = currentLang==='en' ? def.name_en : def.name;
+    const desc = currentLang==='en' ? def.desc_en : def.desc;
+    const li = document.createElement('li');
+    li.className = 'ach-card ' + (unlockedAt ? 'unlocked' : 'locked');
+    let dateLine = '';
+    if(unlockedAt){
+      const d = new Date(unlockedAt);
+      dateLine = `<div class="ach-date">${d.toLocaleDateString(currentLang==='en' ? 'en-US' : 'fr-FR')}</div>`;
+    }
+    const isActive = achievements.activeBadge === id;
+    const badgeBtn = unlockedAt
+      ? `<button class="ach-badge-btn${isActive?' active':''}" data-badge="${id}">${isActive ? (currentLang==='en'?'✓ Active':'✓ Actif') : (currentLang==='en'?'Use as title':'Utiliser')}</button>`
+      : '';
+    li.innerHTML = `<span class="ach-icon">${unlockedAt ? def.icon : '🔒'}</span>
+      <span class="ach-info"><div class="ach-name">${name}</div><div class="ach-desc">${desc}</div>${dateLine}</span>
+      ${badgeBtn}`;
+    list.appendChild(li);
+  });
+  list.querySelectorAll('button[data-badge]').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.badge;
+      const newValue = achievements.activeBadge === id ? null : id; // re-cliquer sur l'actif le retire
+      try{
+        await performAction('set_active_badge', { badgeId: newValue });
+        renderAchievementsPanel(c);
+        renderActiveBadgePill();
+      } catch(e){ console.error(e); }
+    };
+  });
+}
+
+// Affiche le titre choisi (badge actif) juste sous le nom/niveau sur la carte compagnon.
+function renderActiveBadgePill(){
+  const slot = $('active-badge-slot');
+  if(!slot) return;
+  if(!achievements || !achievements.activeBadge || !ACHIEVEMENT_DISPLAY[achievements.activeBadge]){
+    slot.innerHTML = '';
+    return;
+  }
+  const def = ACHIEVEMENT_DISPLAY[achievements.activeBadge];
+  const name = currentLang==='en' ? def.name_en : def.name;
+  slot.innerHTML = `<span class="active-badge-pill">${def.icon} ${name}</span>`;
+}
+
 const CARE_MAX = 5;
 
 // ============================================================
@@ -1851,6 +1955,8 @@ async function pickSpecies(key){
 function renderCreature(c){
   updateTabAccess(c);
   renderBattlepass(c);
+  renderAchievementsPanel(c);
+  renderActiveBadgePill();
   if(c.stage === 0){
     $('species-select-card').style.display = 'block';
     $('creature-card').style.display = 'none';
@@ -3588,6 +3694,10 @@ async function startApp(){
       const boss2 = data.boss;
       boss = boss2;
       const lb2 = data.leaderboard;
+      if(data.achievements){
+        achievements = data.achievements;
+        if(data.newlyUnlocked && data.newlyUnlocked.length) showAchievementToasts(data.newlyUnlocked);
+      }
       if(data.bossDefeatedNow) log(currentLang==='en'
         ? `${bossDef(boss2).name} is defeated! It respawns immediately — the weekly ranking continues.`
         : `${bossDef(boss2).name} est vaincu ! Il renaît aussitôt — le classement de la semaine continue.`, 'good');
