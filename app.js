@@ -1391,6 +1391,19 @@ const ACHIEVEMENT_DISPLAY = {
   noyau_unlocked:   { icon:'🌀', name:'Convergence',                name_en:'Convergence',          desc:'Débloque le Noyau Primordial.',                                 desc_en:'Unlock the Primordial Core.' },
 };
 
+// Succès à seuil numérique (les autres sont binaires : "obtenu" ou "pas obtenu",
+// pas de notion de progression à afficher pour eux). statKey pointe directement
+// vers un compteur de achievements.stats (voir perform-action.ts).
+const ACHIEVEMENT_PROGRESS = {
+  floors_100:      { statKey:'totalFloorsCleared',      target:100 },
+  floors_500:      { statKey:'totalFloorsCleared',      target:500 },
+  boss_kills_10:   { statKey:'bossKillsPersonal',        target:10 },
+  boss_kills_50:   { statKey:'bossKillsPersonal',        target:50 },
+  moltcoins_10000: { statKey:'moltcoinsEarnedLifetime',  target:10000 },
+  treasure_100:    { statKey:'treasureDigsTotal',        target:100 },
+  training_500:    { statKey:'trainingSessionsTotal',    target:500 },
+};
+
 function showAchievementToasts(ids){
   const wrap = $('ach-toast-wrap');
   if(!wrap) return;
@@ -1429,8 +1442,15 @@ function renderAchievementsPanel(c){
     const badgeBtn = unlockedAt
       ? `<button class="ach-badge-btn${isActive?' active':''}" data-badge="${id}">${isActive ? (currentLang==='en'?'✓ Active':'✓ Actif') : (currentLang==='en'?'Use as title':'Utiliser')}</button>`
       : '';
+    let progressLine = '';
+    const prog = ACHIEVEMENT_PROGRESS[id];
+    if(!unlockedAt && prog){
+      const current = Math.min(prog.target, (achievements.stats && achievements.stats[prog.statKey]) || 0);
+      const pct = Math.round((current / prog.target) * 100);
+      progressLine = `<div class="ach-progress"><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--gold);"></div></div><div class="ach-progress-text">${current.toLocaleString()} / ${prog.target.toLocaleString()}</div></div>`;
+    }
     li.innerHTML = `<span class="ach-icon">${unlockedAt ? def.icon : '🔒'}</span>
-      <span class="ach-info"><div class="ach-name">${name}</div><div class="ach-desc">${desc}</div>${dateLine}</span>
+      <span class="ach-info"><div class="ach-name">${name}</div><div class="ach-desc">${desc}</div>${dateLine}${progressLine}</span>
       ${badgeBtn}`;
     list.appendChild(li);
   });

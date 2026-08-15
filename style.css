@@ -1,4 +1,4 @@
-/* ============================================================
+  /* ============================================================
      ============ VARIABLES DE THÈME (couleurs, polices) ============
      ============================================================ */
   :root{
@@ -734,6 +734,9 @@
   .ach-card.locked .ach-name{color:var(--ivory-dim);}
   .ach-desc{font-size:10.5px;color:var(--ivory-dim);margin-top:1px;}
   .ach-date{font-size:9px;color:var(--gold);margin-top:2px;font-family:var(--font-mono);}
+  .ach-progress{margin-top:5px;}
+  .ach-progress .bar-track{height:5px;}
+  .ach-progress-text{font-family:var(--font-mono);font-size:8.5px;color:var(--ivory-dim);margin-top:2px;text-align:right;}
   .ach-badge-btn{font-size:9px;padding:4px 7px;flex-shrink:0;}
   .ach-badge-btn.active{background:linear-gradient(180deg,var(--gold-bright),var(--gold));border-color:var(--gold);color:var(--moss-950);font-weight:700;}
 
