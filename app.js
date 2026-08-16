@@ -1580,7 +1580,7 @@ function totalPower(c){
 // NB : maxBossAttacks (Boss Mondial) est ici par proximité de code
 // historique, mais logiquement il appartient à la section Boss plus bas.
 // ============================================================
-function floorRequirement(floor){ return Math.round(50 * Math.pow(1.04222, floor - 1)); }
+function (floor){ return Math.round(50 * Math.pow(1.04222, floor - 1)); }
 function maxBossAttacks(c){ return c.species === 'Luminel' ? 4 : 3; }
 function maxDungeonAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour
 function maxDungeonClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour
@@ -1623,7 +1623,7 @@ function corruptUnlockEligible(c){ return c.dungeonFloor >= CORRUPT_UNLOCK_FLOOR
 // l'étage 100 du Noyau (~4,4M) sera un objectif de très long terme, à revoir plus tard).
 // Facteur d'échelle objets ×11,67 depuis le Sanctuaire (35000/3000).
 // ⚠️ Toutes ces formules DOIVENT rester identiques entre app.js et perform-action.ts.
-function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.02513, floor - 1)); }
+function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.02315, floor - 1)); }
 function maxCorruptAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour — identique au Wyrm, par principe (voir note ci-dessus)
 function maxCorruptClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour — identique au Wyrm
 function corruptXP(floor){ return floor <= 100 ? 30 + floor * 2 : 30; } // au-delà de l'étage 100, le Noyau prend le relais côté XP
