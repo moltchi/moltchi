@@ -257,7 +257,7 @@ const I18N_EN = {
   streak_title: 'Daily Login Bonus',
   streak_claim: 'Claim',
 
-  // --- Ajouts audit i18n HTML du [date] ---
+  // --- Ajouts audit i18n HTML du 16/08/2026 ---
   page_title: 'Moltchi — Virtual Pet RPG Simulator',
   eyebrow_subtitle: 'Virtual Pet RPG Simulator',
   title_back_home: 'Back to My Creature',
@@ -1606,7 +1606,7 @@ function corruptUnlockEligible(c){ return c.dungeonFloor >= CORRUPT_UNLOCK_FLOOR
 //    assidu peut réellement atteindre après quelques mois à un an (entraînement quotidien +
 //    meilleur équipement du donjon précédent), et caler req_n(100) sur cette estimation —
 //    ne JAMAIS composer aveuglément le même taux sur 100 étages supplémentaires, ça explose
-//    de façon incontrôlable (voir l'erreur corrigée le [date] : l'ancien taux de 5% pour le
+//    de façon incontrôlable (voir l'erreur corrigée le 16/08/2026 : l'ancien taux de 5% pour le
 //    Sanctuaire donnait un étage 100 à ~375 000, hors de portée avant plusieurs années).
 // 1. req_n(1) = req_(n-1)(100) — l'étage 1 du nouveau donjon reprend exactement le niveau
 //    de difficulté de l'étage 100 du précédent (pas de saut arbitraire).
