@@ -947,6 +947,52 @@ function playActionAnimation(c, fieldName){
   });
 }
 
+// ---------- Pont Phaser (progressif, voir game/bridge.js) ----------
+// Migration en cours vers Phaser comme couche visuelle (voir la conversation du
+// 17/08/2026 pour l'architecture complète). Principe non négociable pendant la
+// transition : ne JAMAIS supprimer playActionAnimation() tant que Phaser n'a pas
+// été validé en production sur mobile. Ce wrapper tente Phaser en premier ; s'il
+// n'est pas prêt (chargement en cours, échoué, navigateur incompatible...), il
+// retombe silencieusement sur l'ancien système vidéo, sans jamais rien casser.
+//
+//   Phaser disponible ?
+//          │
+//       oui ─────→ animation Phaser (Bridge.playCareAnimation renvoie true)
+//          │
+//        non
+//          ↓
+//   playActionAnimation(c, fieldName)  ← ancien système, inchangé
+//
+// Une fois feed/play/sleep confirmés fiables sur mobile en prod, on pourra
+// retirer ce wrapper (et playActionAnimation lui-même) — pas avant.
+let _phaserBridgeModule = null;
+async function playCareAnimationWithFallback(c, fieldName){
+  const spDef = SPECIES[c.species];
+  const src = spDef && spDef[fieldName]; // vraie vidéo de la race, résolue AVANT l'appel — Phaser ne connaît rien des races
+  try{
+    if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
+    const { Bridge } = _phaserBridgeModule;
+    if(src && Bridge.isReady() && Bridge.playCareAnimation(fieldName, src)) return; // Phaser a pris le relais, rien de plus à faire
+  } catch(e){
+    console.warn('[Moltchi/Phaser] Pont indisponible, fallback sur l\'animation existante :', e);
+  }
+  playActionAnimation(c, fieldName); // fallback — chemin exécuté aujourd'hui pour 100% des joueurs
+}
+
+// Démarre le chargement de Phaser en tâche de fond dès que la carte créature existe
+// (voir l'appel dans renderCreature), pour qu'il ait une chance d'être prêt au
+// moment où le joueur clique Nourrir/Jouer/Reposer. Ne bloque jamais l'affichage :
+// c'est un simple "coup de pouce" au chargement, pas une attente.
+let _phaserPreloadStarted = false;
+function preloadPhaserInBackground(){
+  if(_phaserPreloadStarted) return;
+  _phaserPreloadStarted = true;
+  import('./game/bridge.js').then(mod => {
+    _phaserBridgeModule = mod;
+    mod.Bridge.ensureLoaded();
+  }).catch(() => {}); // échec silencieux : preloadPhaserInBackground() n'est qu'une optimisation, jamais requis
+}
+
 
 // ============================================================
 // ============ CRÉATURE : ÉTAT PAR DÉFAUT & PERSISTANCE ============
@@ -1616,14 +1662,17 @@ function corruptUnlockEligible(c){ return c.dungeonFloor >= CORRUPT_UNLOCK_FLOOR
 // 4. Les valeurs des objets du nouveau donjon doivent être recalculées en multipliant les
 //    valeurs équivalentes du donjon précédent par le facteur d'échelle = req_n(1) / req_(n-1)(1).
 // Sanctuaire Corrompu : req_wyrm(1)=50, req_corrompu(1)=req_wyrm(100)=2999→3000,
-// req_corrompu(100) calibré à ≈35 000 (≈6-9 mois pour un joueur assidu bien équipé,
-// voir simulation dans le chat) → taux = 2,51%/étage. Facteur d'échelle objets ×60.
-// Noyau Primordial : req_corrompu(1)=3000, req_noyau(1)=req_corrompu(100)=35 000,
+// req_corrompu(100) calibré à ≈35 000 initialement (≈6-9 mois pour un joueur assidu bien
+// équipé), réduit le 16/08/2026 à ≈28 500 (taux 2,3%/étage, léger assouplissement demandé).
+// Facteur d'échelle objets ×60 (inchangé, basé sur req_corrompu(1)/req_wyrm(1), pas sur l'étage 100).
+// Noyau Primordial : req_corrompu(1)=3000, req_noyau(1)=req_corrompu(100)=~28 500 (baisse
+// automatiquement avec le Sanctuaire, chaîné dessus),
 // taux repris à 5% (comme le tout premier donjon, en attendant un futur rééquilibrage —
-// l'étage 100 du Noyau (~4,4M) sera un objectif de très long terme, à revoir plus tard).
-// Facteur d'échelle objets ×11,67 depuis le Sanctuaire (35000/3000).
+// l'étage 100 du Noyau reste un objectif de très long terme, à revoir plus tard).
+// Facteur d'échelle objets ×11,67 conservé tel quel (calibré à l'origine, pas recalculé
+// avec la baisse du Sanctuaire — les objets du Noyau restent à leur valeur actuelle).
 // ⚠️ Toutes ces formules DOIVENT rester identiques entre app.js et perform-action.ts.
-function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.02, floor - 1)); }
+function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.023, floor - 1)); }
 function maxCorruptAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour — identique au Wyrm, par principe (voir note ci-dessus)
 function maxCorruptClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour — identique au Wyrm
 function corruptXP(floor){ return floor <= 100 ? 30 + floor * 2 : 30; } // au-delà de l'étage 100, le Noyau prend le relais côté XP
@@ -1997,6 +2046,7 @@ function renderCreature(c){
   $('danger-zone-card').style.display = 'block'; $('recovery-card').style.display = 'block';
   $('inventory-card').style.display = 'block';
   $('backpack-moltcoin-balance').textContent = (c.moltcoins || 0).toLocaleString();
+  preloadPhaserInBackground(); // seulement ici : #creature-stage a maintenant une vraie taille (display:block)
 
   const spDef = SPECIES[c.species];
   $('creature-card').className = 'card companion-card' + (c.species ? ` sp-${c.species}` : '');
@@ -3666,7 +3716,7 @@ async function startApp(){
       const data = await performAction('care_feed', {});
       creature = mergeDefaults(data.creature);
       renderCreature(creature);
-      playActionAnimation(creature, 'eatVideo');
+      playCareAnimationWithFallback(creature, 'eatVideo');
     } catch(e){ console.error(e); }
   };
   $('btn-play').onclick = async () => {
@@ -3675,7 +3725,7 @@ async function startApp(){
       const data = await performAction('care_play', {});
       creature = mergeDefaults(data.creature);
       renderCreature(creature);
-      playActionAnimation(creature, 'playVideo');
+      playCareAnimationWithFallback(creature, 'playVideo');
     } catch(e){ console.error(e); }
   };
   $('btn-sleep').onclick = async () => {
@@ -3684,7 +3734,7 @@ async function startApp(){
       const data = await performAction('care_rest', {});
       creature = mergeDefaults(data.creature);
       renderCreature(creature);
-      playActionAnimation(creature, 'sleepVideo');
+      playCareAnimationWithFallback(creature, 'sleepVideo');
     } catch(e){ console.error(e); }
   };
 

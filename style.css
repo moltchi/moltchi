@@ -763,6 +763,18 @@
   ::-webkit-scrollbar{width:6px;}
   ::-webkit-scrollbar-thumb{background:var(--moss-700);border-radius:3px;}
 
+  /* ============================================================
+     ============ PHASER (couche visuelle, progressive) ============
+     Calqué exactement sur .companion-portrait-wrap (même zone, par-dessus).
+     pointer-events:none : ne doit JAMAIS intercepter un clic destiné à l'UI
+     HTML existante (boutons Nourrir/Jouer/Reposer notamment) — Phaser est
+     un habillage visuel, jamais une couche d'interaction.
+     Reste vide/invisible tant que game/bridge.js n'a pas chargé Phaser avec
+     succès ; sinon fallback silencieux vers l'ancien système vidéo (voir app.js).
+     ============================================================ */
+  #creature-stage{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;}
+  #creature-stage canvas{display:block;width:100% !important;height:100% !important;}
+
   /* ===================================================================
      RESPONSIVE — à conserver et étendre pour toute future modification.
      Le jeu doit rester pleinement jouable au doigt sur mobile (~360-430px
