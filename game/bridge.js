@@ -28,7 +28,7 @@
 // jamais au chargement initial de la page (écran d'accueil, choix du pseudo).
 // ============================================================
 
-const PHASER_CDN_URL = 'https://cdn.jsdelivr.net/npm/phaser@4.1.0/dist/phaser.esm.min.js';
+const PHASER_CDN_URL = 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.esm.min.js';
 
 let _loadingPromise = null;
 let _game = null;
