@@ -3866,8 +3866,23 @@ init();
 // PWA : enregistre le Service Worker (nécessaire pour l'installabilité sur la plupart
 // des navigateurs). Échec silencieux si indisponible (ex: navigateur trop ancien) —
 // le jeu continue de fonctionner normalement, juste sans installation possible.
+//
+// IMPORTANT — sw.js appelle self.skipWaiting() + self.clients.claim(), donc un nouveau
+// Service Worker prend le contrôle immédiatement dès qu'il est détecté, SANS attendre
+// que tous les onglets se ferment. Mais ça ne recharge pas pour autant le HTML/JS déjà
+// chargé en mémoire dans l'onglet ouvert — sans le écouteur ci-dessous, le joueur reste
+// bloqué sur l'ancienne version jusqu'à un rechargement manuel (parfois deux, selon le
+// timing). navigator.serviceWorker.oncontrollerchange se déclenche pile au moment où ce
+// changement de contrôle a lieu : on en profite pour recharger la page une seule fois
+// (le garde-fou _swReloaded évite une boucle si l'événement se déclenchait plusieurs fois).
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch((e) => console.error('Service Worker non enregistré :', e));
+  });
+  let _swReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(_swReloaded) return;
+    _swReloaded = true;
+    window.location.reload();
   });
 }
