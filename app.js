@@ -972,17 +972,32 @@ async function playCareAnimationWithFallback(c, fieldName){
   try{
     if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
     const { Bridge } = _phaserBridgeModule;
-    if(src && Bridge.isReady() && Bridge.playCareAnimation(fieldName, src)) return; // Phaser a pris le relais, rien de plus à faire
+    // On attend ensureLoaded() plutôt que de se fier à un simple isReady() instantané :
+    // preloadPhaserBlocking() a déjà tout chargé avant même que l'appli ne se dévoile
+    // (voir init()), donc la promesse est déjà résolue ici dans l'immense majorité des
+    // cas — ce await ne fait qu'assurer la cohérence si jamais cette fonction était
+    // appelée avant la fin de l'écran de chargement. ensureLoaded() ne bloque jamais
+    // indéfiniment : elle se résout toujours (true ou false), y compris en cas d'échec
+    // réseau/CDN.
+    await Bridge.ensureLoaded();
+    if(src && Bridge.isReady() && Bridge.playCareAnimation(fieldName, src)){
+      console.log(`[Moltchi] ${fieldName} → Phaser`);
+      return; // Phaser a pris le relais, rien de plus à faire
+    }
   } catch(e){
     console.warn('[Moltchi/Phaser] Pont indisponible, fallback sur l\'animation existante :', e);
   }
+  console.log(`[Moltchi] ${fieldName} → fallback vidéo`);
   playActionAnimation(c, fieldName); // fallback — chemin exécuté aujourd'hui pour 100% des joueurs
 }
 
-// Démarre le chargement de Phaser en tâche de fond dès que la carte créature existe
-// (voir l'appel dans renderCreature), pour qu'il ait une chance d'être prêt au
-// moment où le joueur clique Nourrir/Jouer/Reposer. Ne bloque jamais l'affichage :
-// c'est un simple "coup de pouce" au chargement, pas une attente.
+// Démarre le chargement de Phaser en tâche de fond dès le lancement de l'appli (voir
+// l'appel dans init()), sans attendre que la carte créature existe : #creature-stage est
+// déjà dans le DOM depuis le HTML de base (juste display:none tant que l'œuf n'a pas
+// éclos), et ensureLoaded() retombe de toute façon sur 300x300 si clientWidth vaut 0.
+// Charger le plus tôt possible maximise les chances que Phaser soit déjà prêt au moment
+// où le joueur clique Nourrir/Jouer/Reposer ou lance un mini-jeu, plutôt que de faire la
+// course entre le chargement réseau et le premier clic.
 let _phaserPreloadStarted = false;
 function preloadPhaserInBackground(){
   if(_phaserPreloadStarted) return;
@@ -991,6 +1006,77 @@ function preloadPhaserInBackground(){
     _phaserBridgeModule = mod;
     mod.Bridge.ensureLoaded();
   }).catch(() => {}); // échec silencieux : preloadPhaserInBackground() n'est qu'une optimisation, jamais requis
+}
+
+// ---------- Écran de chargement bloquant au lancement de l'appli ----------
+// Contrairement à preloadPhaserInBackground() (qui ne fait que lancer le chargement sans
+// attendre), preloadPhaserBlocking() est utilisé au tout début de init() : l'écran
+// #phaser-loading-overlay (visible par défaut dans le HTML) reste affiché avec une vraie
+// barre de progression tant que Phaser + les deux scènes ne sont pas prêts, PUIS l'appli
+// se dévoile. Ainsi le joueur ne voit jamais un mini-jeu ou une animation de soin
+// retomber sur son fallback DOM juste par malchance de timing réseau — au pire, il
+// attend un peu plus longtemps à l'écran de chargement.
+const PHASER_LOADING_LABELS = {
+  init:                 { fr: 'Démarrage…',              en: 'Starting up…' },
+  downloading:          { fr: 'Chargement du moteur…',   en: 'Loading the game engine…' },
+  'engine-loaded':      { fr: 'Mise en scène…',          en: 'Setting the stage…' },
+  'game-created':       { fr: 'Réveil des créatures…',   en: 'Waking the creatures…' },
+  'main-scene-ready':   { fr: 'Presque prêt…',           en: 'Almost there…' },
+  'training-scene-ready': { fr: 'Presque prêt…',         en: 'Almost there…' },
+  ready:                { fr: 'Prêt !',                  en: 'Ready!' },
+  'no-container':       { fr: 'Prêt !',                  en: 'Ready!' },
+  'main-scene-failed':  { fr: 'Prêt !',                  en: 'Ready!' },
+  timeout:              { fr: 'Prêt !',                  en: 'Ready!' },
+  error:                { fr: 'Prêt !',                  en: 'Ready!' },
+};
+function setPhaserLoadingProgress(pct, stage){
+  const bar = document.getElementById('phaser-loading-bar');
+  if(bar) bar.style.width = Math.max(4, Math.min(100, pct)) + '%';
+  const labelEl = document.getElementById('phaser-loading-label');
+  if(labelEl){
+    const entry = PHASER_LOADING_LABELS[stage];
+    labelEl.textContent = entry ? (currentLang==='en' ? entry.en : entry.fr) : (currentLang==='en' ? 'Loading…' : 'Chargement…');
+  }
+}
+function hidePhaserLoadingOverlay(){
+  const overlay = document.getElementById('phaser-loading-overlay');
+  if(!overlay) return;
+  overlay.style.opacity = '0';
+  overlay.style.pointerEvents = 'none';
+  setTimeout(() => { overlay.style.display = 'none'; }, 400);
+}
+// Délai de sécurité : au-delà, on arrête d'attendre Phaser et on démarre l'appli quand
+// même (fallback DOM existant pris en charge normalement par chaque fonction) — un
+// réseau capricieux ou un CDN bloqué ne doit jamais coincer le joueur sur l'écran de
+// chargement indéfiniment.
+const PHASER_LOADING_TIMEOUT_MS = 8000;
+async function preloadPhaserBlocking(){
+  try{
+    if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
+    const { Bridge } = _phaserBridgeModule;
+    _phaserPreloadStarted = true;
+    await Promise.race([
+      Bridge.ensureLoaded(setPhaserLoadingProgress),
+      new Promise(resolve => setTimeout(() => { setPhaserLoadingProgress(100, 'timeout'); resolve(false); }, PHASER_LOADING_TIMEOUT_MS)),
+    ]);
+  } catch(e){
+    console.warn('[Moltchi/Phaser] Préchargement bloquant indisponible, l\'appli démarre sans Phaser :', e);
+    setPhaserLoadingProgress(100, 'error');
+  } finally {
+    hidePhaserLoadingOverlay();
+  }
+}
+
+// ---------- Pont Phaser — effets visuels ponctuels (Trésor/Donjons/Boss Mondial) ----------
+// Contrairement aux mini-jeux d'entraînement, ces effets sont un pur bonus visuel : pas
+// de résultat à remonter, pas de fallback DOM à prévoir (le texte du journal existant
+// suffit à lui seul). Si Phaser n'est pas prêt, cette fonction ne fait simplement rien —
+// le jeu continue de fonctionner exactement comme avant, échec totalement silencieux.
+async function playFxEffectSafe(fn){
+  try{
+    if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
+    fn(_phaserBridgeModule.Bridge);
+  } catch(e){ /* effet décoratif seulement — échec silencieux, le jeu continue normalement */ }
 }
 
 
@@ -2046,7 +2132,7 @@ function renderCreature(c){
   $('danger-zone-card').style.display = 'block'; $('recovery-card').style.display = 'block';
   $('inventory-card').style.display = 'block';
   $('backpack-moltcoin-balance').textContent = (c.moltcoins || 0).toLocaleString();
-  preloadPhaserInBackground(); // seulement ici : #creature-stage a maintenant une vraie taille (display:block)
+  preloadPhaserInBackground(); // filet de sécurité — normalement déjà lancé par init(), voir plus haut
 
   const spDef = SPECIES[c.species];
   $('creature-card').className = 'card companion-card' + (c.species ? ` sp-${c.species}` : '');
@@ -2821,8 +2907,16 @@ const MG_AMBIENT_CONFIG = {
   water: { emojis:['💧'],           count:1, interval:300 },
 };
 let mgAmbientInterval = null;
+// Jeton de génération incrémenté à chaque démarrage d'un mini-jeu (Réflexe/Mémoire/
+// Rythme/Invocation). Permet aux callbacks async/différés d'un mini-jeu abandonné en
+// cours de route (l'utilisateur a cliqué sur un autre onglet avant la fin) de se rendre
+// compte qu'ils ne sont plus d'actualité et de ne PAS toucher au DOM déjà remplacé par
+// le nouveau mini-jeu — évite les "Cannot set properties of null" sur des éléments
+// (#memory-status, #rune-grid, etc.) qui n'existent plus.
+let mgGen = 0;
 function stopMinigameAmbience(){
   if(mgAmbientInterval){ clearInterval(mgAmbientInterval); mgAmbientInterval = null; }
+  if(_phaserBridgeModule) _phaserBridgeModule.Bridge.stopTrainingGame(); // no-op si Phaser n'a jamais pris le relais
 }
 function spawnAmbientParticle(area, theme){
   const cfg = MG_AMBIENT_CONFIG[theme];
@@ -2937,16 +3031,19 @@ function eventPosInEl(evt, el){
 }
 
 function startReflex(c){
+  const myGen = ++mgGen;
   $('minigame-area').style.display = 'block';
   setMinigameTheme('fire');
   $('minigame-title').textContent = currentLang==='en' ? '⚡ Reflex — click as soon as the zone turns green' : '⚡ Réflexe — clique dès que la zone devient verte';
   const statLabel = currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL;
   runMinigameCountdown(() => {
+  if(myGen !== mgGen) return; // un autre mini-jeu a démarré pendant le décompte
   $('minigame-content').innerHTML = `<div class="reflex-zone wait" id="reflex-zone">${currentLang==='en' ? 'Wait…' : 'Attends…'}</div>`;
   const zone = $('reflex-zone');
   let goTime = null, timeout = null, done = false;
   const delay = 800 + Math.random()*2200;
   timeout = setTimeout(()=>{
+    if(myGen !== mgGen) return;
     goTime = Date.now(); zone.classList.remove('wait'); zone.classList.add('go'); zone.textContent = currentLang==='en' ? 'CLICK!' : 'CLIQUE !';
     spawnImpactFlash(zone, zone.clientWidth/2, zone.clientHeight/2, '#3ecf6e');
   }, delay);
@@ -2961,8 +3058,9 @@ function startReflex(c){
       try{
         const data = await performAction('train_reflex', { tooEarly: true });
         creature = mergeDefaults(data.creature);
+        if(myGen !== mgGen) return; // mini-jeu abandonné pendant l'appel serveur
         renderCreature(creature);
-      } catch(e){ zone.textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
+      } catch(e){ if(myGen === mgGen) zone.textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
       return;
     }
     done = true;
@@ -2972,23 +3070,91 @@ function startReflex(c){
     try{
       const data = await performAction('train_reflex', { reactionMs });
       creature = mergeDefaults(data.creature);
+      if(myGen !== mgGen) return; // mini-jeu abandonné pendant l'appel serveur
       let msg = `${reactionMs}ms — +${data.gain} ${statLabel.crit}`;
       if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
       zone.textContent = msg; zone.classList.remove('go'); zone.classList.add('mg-fly-up');
       renderCreature(creature);
     } catch(e){
-      zone.textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; zone.classList.remove('go');
+      if(myGen === mgGen){ zone.textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; zone.classList.remove('go'); }
       console.error(e);
     }
   };
   });
 }
+
+// ---------- Pont Phaser — Réflexe (voir game/bridge.js et game/scenes/TrainingScene.js) ----------
+// Même principe que playCareAnimationWithFallback() pour nourrir/jouer/reposer : on vérifie
+// si Phaser est prêt AVANT de démarrer quoi que ce soit (pour ne jamais déclencher deux
+// comptes à rebours), puis soit Phaser gère le mini-jeu, soit on retombe entièrement sur
+// startReflex(c) ci-dessus, INCHANGÉE. Phaser ne fait que remonter l'interaction brute
+// (temps de réaction / trop tôt) — c'est toujours ici, dans app.js, qu'on appelle le
+// serveur et qu'on affiche le résultat réel qu'il renvoie.
+async function startReflexWithFallback(c){
+  const myGen = ++mgGen;
+  let phaserReady = false;
+  try{
+    if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
+    // Idem playCareAnimationWithFallback : on attend ensureLoaded() plutôt qu'un simple
+    // isReady() instantané, pour laisser sa chance à Phaser même si le chargement lancé
+    // dès init() n'est pas encore tout à fait terminé.
+    await _phaserBridgeModule.Bridge.ensureLoaded();
+    phaserReady = _phaserBridgeModule.Bridge.isReady();
+  } catch(e){
+    console.warn('[Moltchi/Phaser] Pont indisponible pour le Réflexe, fallback DOM :', e);
+  }
+  if(myGen !== mgGen) return; // un autre mini-jeu a démarré pendant l'import/l'attente ci-dessus
+
+  if(!phaserReady){
+    startReflex(c); // ancien système DOM, INCHANGÉ — gère lui-même son propre compte à rebours (et son propre jeton)
+    return;
+  }
+
+  $('minigame-area').style.display = 'block';
+  setMinigameTheme('fire');
+  $('minigame-title').textContent = currentLang==='en' ? '⚡ Reflex — click as soon as the zone turns green' : '⚡ Réflexe — clique dès que la zone devient verte';
+  const statLabel = currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL;
+  const { Bridge } = _phaserBridgeModule;
+
+  runMinigameCountdown(() => {
+    if(myGen !== mgGen) return; // un autre mini-jeu a démarré pendant le décompte
+    // Contrairement au chemin DOM (où runMinigameCountdown écrit dans #minigame-content
+    // avant que le jeu remplace ce HTML), le mini-jeu Phaser se dessine dans #training-stage,
+    // un élément SÉPARÉ juste au-dessus. Sans ce nettoyage, le dernier chiffre du décompte
+    // ("1") reste affiché sous le canvas, pendant ET après la partie.
+    $('minigame-content').innerHTML = '';
+    const started = Bridge.startReflexGame(async (result) => {
+      try{
+        let data, msg;
+        if(result.tooEarly){
+          data = await performAction('train_reflex', { tooEarly: true });
+          msg = currentLang==='en' ? 'Too early! Try again.' : 'Trop tôt ! Réessaie.';
+        } else {
+          data = await performAction('train_reflex', { reactionMs: result.reactionMs });
+          msg = `${result.reactionMs}ms — +${data.gain} ${statLabel.crit}`;
+          if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+        }
+        creature = mergeDefaults(data.creature);
+        if(myGen !== mgGen) return; // mini-jeu abandonné pendant l'appel serveur : ne pas toucher à l'écran suivant
+        Bridge.showTrainingResult(msg);
+        renderCreature(creature);
+      } catch(e){
+        if(myGen === mgGen) Bridge.showTrainingResult(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.');
+        console.error(e);
+      }
+    });
+    if(!started) startReflex(c); // filet de sécurité si Phaser est devenu indisponible entre-temps (startReflex prend son propre jeton)
+    console.log(started ? '[Moltchi] Réflexe → Phaser' : '[Moltchi] Réflexe → fallback DOM');
+  });
+}
 function startMemory(c){
+  const myGen = ++mgGen;
   $('minigame-area').style.display = 'block';
   setMinigameTheme('wind');
   $('minigame-title').textContent = currentLang==='en' ? '🧩 Memory — reproduce the sequence' : '🧩 Mémoire — reproduis la séquence';
   const statLabel = currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL;
   runMinigameCountdown(() => {
+  if(myGen !== mgGen) return; // un autre mini-jeu a démarré pendant le décompte
   $('minigame-content').innerHTML = `<div class="memory-grid" id="memory-grid"></div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);margin-top:8px;" id="memory-status">${currentLang==='en' ? 'Watch closely…' : 'Regarde bien…'}</div>`;
   const grid = $('memory-grid');
   const tiles = [];
@@ -2998,11 +3164,14 @@ function startMemory(c){
   let playerIdx = 0, accepting = false;
   async function playSequence(){
     for(const idx of seq){
+      if(myGen !== mgGen) return; // mini-jeu abandonné en plein milieu de la démonstration
       tiles[idx].classList.add('lit');
       await new Promise(r=>setTimeout(r,450));
+      if(myGen !== mgGen) return;
       tiles[idx].classList.remove('lit');
       await new Promise(r=>setTimeout(r,180));
     }
+    if(myGen !== mgGen) return; // le panneau #memory-status peut ne plus exister du tout
     $('memory-status').textContent = currentLang==='en' ? 'Your turn — reproduce the sequence' : 'À toi — reproduis la séquence';
     accepting = true;
   }
@@ -3019,12 +3188,13 @@ function startMemory(c){
           try{
             const data = await performAction('train_memory', { success: true, playerIdx });
             creature = mergeDefaults(data.creature);
+            if(myGen !== mgGen) return; // mini-jeu abandonné pendant l'appel serveur
             let msg = currentLang==='en' ? `Perfect! +${data.gain} ${statLabel.dodge}` : `Parfait ! +${data.gain} ${statLabel.dodge}`;
             if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
             $('memory-status').textContent = msg;
             $('memory-status').classList.add('mg-fly-up');
             renderCreature(creature);
-          } catch(e){ $('memory-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
+          } catch(e){ if(myGen === mgGen) $('memory-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
         }
       } else {
         t.classList.add('wrong'); setTimeout(()=>t.classList.remove('wrong'),300);
@@ -3034,26 +3204,85 @@ function startMemory(c){
         try{
           const data = await performAction('train_memory', { success: false, playerIdx });
           creature = mergeDefaults(data.creature);
+          if(myGen !== mgGen) return; // mini-jeu abandonné pendant l'appel serveur
           let msg = currentLang==='en'
             ? `Missed at step ${playerIdx+1} — +${data.gain} ${statLabel.dodge} anyway`
             : `Raté à l'étape ${playerIdx+1} — +${data.gain} ${statLabel.dodge} quand même`;
           if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
           $('memory-status').textContent = msg;
           renderCreature(creature);
-        } catch(e){ $('memory-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
+        } catch(e){ if(myGen === mgGen) $('memory-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
       }
     };
   });
   playSequence();
   });
 }
-function genericBar(c, opts){
+
+// ---------- Pont Phaser — Mémoire (voir game/bridge.js et game/scenes/TrainingScene.js) ----------
+// Même principe que startReflexWithFallback() : on vérifie que Phaser est prêt AVANT de
+// démarrer quoi que ce soit, puis soit Phaser gère tout le mini-jeu (démonstration +
+// saisie du joueur), soit on retombe entièrement sur startMemory(c) ci-dessus, INCHANGÉE.
+async function startMemoryWithFallback(c){
+  const myGen = ++mgGen;
+  let phaserReady = false;
+  try{
+    if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
+    await _phaserBridgeModule.Bridge.ensureLoaded();
+    phaserReady = _phaserBridgeModule.Bridge.isReady();
+  } catch(e){
+    console.warn('[Moltchi/Phaser] Pont indisponible pour la Mémoire, fallback DOM :', e);
+  }
+  if(myGen !== mgGen) return; // un autre mini-jeu a démarré pendant l'import/l'attente ci-dessus
+
+  if(!phaserReady){
+    startMemory(c); // ancien système DOM, INCHANGÉ — gère lui-même son propre compte à rebours (et son propre jeton)
+    return;
+  }
+
+  $('minigame-area').style.display = 'block';
+  setMinigameTheme('wind');
+  $('minigame-title').textContent = currentLang==='en' ? '🧩 Memory — reproduce the sequence' : '🧩 Mémoire — reproduis la séquence';
+  const statLabel = currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL;
+  const { Bridge } = _phaserBridgeModule;
+
+  runMinigameCountdown(() => {
+    if(myGen !== mgGen) return; // un autre mini-jeu a démarré pendant le décompte
+    $('minigame-content').innerHTML = ''; // sinon le dernier chiffre du décompte reste affiché sous le canvas
+    const started = Bridge.startMemoryGame(async (result) => {
+      try{
+        let data, msg;
+        if(result.success){
+          data = await performAction('train_memory', { success: true, playerIdx: result.playerIdx });
+          msg = currentLang==='en' ? `Perfect! +${data.gain} ${statLabel.dodge}` : `Parfait ! +${data.gain} ${statLabel.dodge}`;
+        } else {
+          data = await performAction('train_memory', { success: false, playerIdx: result.playerIdx });
+          msg = currentLang==='en'
+            ? `Missed at step ${result.playerIdx+1} — +${data.gain} ${statLabel.dodge} anyway`
+            : `Raté à l'étape ${result.playerIdx+1} — +${data.gain} ${statLabel.dodge} quand même`;
+        }
+        if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+        creature = mergeDefaults(data.creature);
+        if(myGen !== mgGen) return; // mini-jeu abandonné pendant l'appel serveur
+        Bridge.showTrainingResult(msg);
+        renderCreature(creature);
+      } catch(e){
+        if(myGen === mgGen) Bridge.showTrainingResult(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.');
+        console.error(e);
+      }
+    });
+    if(!started) startMemory(c); // filet de sécurité si Phaser est devenu indisponible entre-temps
+    console.log(started ? '[Moltchi] Mémoire → Phaser' : '[Moltchi] Mémoire → fallback DOM');
+  });
+}
+function genericBar(c, opts, myGen){
   // opts: {label, statusEl id via minigame-content already set, stat, extraClass}
   const track = $('rhythm-track');
   const marker = $('rhythm-marker');
   let pos = 0, dir = 1, raf, done = false;
   const speed = 1.6;
   function animate(){
+    if(myGen !== mgGen){ cancelAnimationFrame(raf); return; } // mini-jeu abandonné : on arrête la boucle plutôt que de tourner dans le vide
     pos += dir*speed;
     if(pos >= 100){ pos = 100; dir = -1; }
     if(pos <= 0){ pos = 0; dir = 1; }
@@ -3077,21 +3306,70 @@ function genericBar(c, opts){
     try{
       const data = await performAction('train_rhythm', { distFromCenter });
       creature = mergeDefaults(data.creature);
+      if(myGen !== mgGen) return; // mini-jeu abandonné pendant l'appel serveur
       let msg = `+${data.gain} ${opts.label}`;
       if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
       $('rhythm-status').textContent = msg;
       $('rhythm-status').classList.add('mg-fly-up');
       renderCreature(creature);
-    } catch(e){ $('rhythm-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
+    } catch(e){ if(myGen === mgGen) $('rhythm-status').textContent = currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'; console.error(e); }
   };
 }
 function startRhythm(c){
+  const myGen = ++mgGen;
   $('minigame-area').style.display = 'block';
   setMinigameTheme('earth');
   $('minigame-title').textContent = currentLang==='en' ? '🎵 Rhythm — click when the cursor is in the golden zone' : '🎵 Rythme — clique quand le curseur est dans la zone dorée';
   runMinigameCountdown(() => {
+  if(myGen !== mgGen) return; // un autre mini-jeu a démarré pendant le décompte
   $('minigame-content').innerHTML = `<div class="rhythm-track" id="rhythm-track"><div class="rhythm-zone"></div><div class="rhythm-marker" id="rhythm-marker" style="left:0%"></div></div><div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);" id="rhythm-status">${currentLang==='en' ? 'Click at the right moment…' : 'Clique au bon moment…'}</div>`;
-  genericBar(c, {stat:'stamina', game:'rhythm', label:(currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL).stamina});
+  genericBar(c, {stat:'stamina', game:'rhythm', label:(currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL).stamina}, myGen);
+  });
+}
+
+// ---------- Pont Phaser — Rythme (voir game/bridge.js et game/scenes/TrainingScene.js) ----------
+async function startRhythmWithFallback(c){
+  const myGen = ++mgGen;
+  let phaserReady = false;
+  try{
+    if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
+    await _phaserBridgeModule.Bridge.ensureLoaded();
+    phaserReady = _phaserBridgeModule.Bridge.isReady();
+  } catch(e){
+    console.warn('[Moltchi/Phaser] Pont indisponible pour le Rythme, fallback DOM :', e);
+  }
+  if(myGen !== mgGen) return;
+
+  if(!phaserReady){
+    startRhythm(c); // ancien système DOM, INCHANGÉ
+    return;
+  }
+
+  $('minigame-area').style.display = 'block';
+  setMinigameTheme('earth');
+  $('minigame-title').textContent = currentLang==='en' ? '🎵 Rhythm — click when the cursor is in the golden zone' : '🎵 Rythme — clique quand le curseur est dans la zone dorée';
+  const statLabel = (currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL).stamina;
+  const { Bridge } = _phaserBridgeModule;
+
+  runMinigameCountdown(() => {
+    if(myGen !== mgGen) return;
+    $('minigame-content').innerHTML = '';
+    const started = Bridge.startRhythmGame(async (result) => {
+      try{
+        const data = await performAction('train_rhythm', { distFromCenter: result.distFromCenter });
+        creature = mergeDefaults(data.creature);
+        if(myGen !== mgGen) return;
+        let msg = `+${data.gain} ${statLabel}`;
+        if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+        Bridge.showTrainingResult(msg);
+        renderCreature(creature);
+      } catch(e){
+        if(myGen === mgGen) Bridge.showTrainingResult(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.');
+        console.error(e);
+      }
+    });
+    if(!started) startRhythm(c);
+    console.log(started ? '[Moltchi] Rythme → Phaser' : '[Moltchi] Rythme → fallback DOM');
   });
 }
 const ARCANE_RUNES = ['᛭','ᚨ','ᛟ','ᚱ','ᛝ','ᛒ'];
@@ -3099,12 +3377,14 @@ const ARCANE_ROUNDS = 5;
 const ARCANE_ROUND_TIME = 1800; // ms
 
 function startArcane(c){
+  const myGen = ++mgGen;
   $('minigame-area').style.display = 'block';
   setMinigameTheme('water');
   $('minigame-title').textContent = currentLang==='en' ? '🔮 Invocation — click the rune matching the one shown, before the timer runs out' : '🔮 Invocation — clique la rune identique à celle affichée, avant la fin du sablier';
   let round = 0, totalScore = 0, roundActive = false, timerRaf, roundStart;
 
   function playRound(){
+    if(myGen !== mgGen) return; // mini-jeu abandonné entre deux manches
     round++;
     const target = ARCANE_RUNES[Math.floor(Math.random()*ARCANE_RUNES.length)];
     const choices = new Set([target]);
@@ -3128,7 +3408,7 @@ function startArcane(c){
     const timerBar = $('arcane-timer');
     const targetEl = $('arcane-target');
     function tick(){
-      if(!roundActive) return;
+      if(!roundActive || myGen !== mgGen) return; // mini-jeu abandonné : on arrête la boucle rAF
       const elapsed = Date.now() - roundStart;
       const pct = Math.max(0, 100 - (elapsed / ARCANE_ROUND_TIME) * 108);
       timerBar.style.width = pct + '%';
@@ -3155,6 +3435,7 @@ function startArcane(c){
       shakeElement(grid);
     }
     await new Promise(r=>setTimeout(r, 250));
+    if(myGen !== mgGen) return; // mini-jeu abandonné pendant la pause entre deux manches
     if(round < ARCANE_ROUNDS){
       $('rune-grid').style.opacity = '1';
       playRound();
@@ -3162,6 +3443,7 @@ function startArcane(c){
       try{
         const data = await performAction('train_arcane', { totalScore });
         creature = mergeDefaults(data.creature);
+        if(myGen !== mgGen) return; // mini-jeu abandonné pendant l'appel serveur
         const magicLabel = (currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL).magic;
         const uniqueMsg = data.uniqueFound
           ? (currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`)
@@ -3171,7 +3453,7 @@ function startArcane(c){
           : `<div style="font-family:var(--font-mono);font-size:13px;color:var(--ivory-dim);text-align:center;padding:20px 0;">Invocation terminée — <span style="color:var(--violet);">+${data.gain} ${magicLabel}</span>${uniqueMsg}</div>`;
         renderCreature(creature);
       } catch(e){
-        $('minigame-content').innerHTML = currentLang==='en'
+        if(myGen === mgGen) $('minigame-content').innerHTML = currentLang==='en'
           ? `<div style="font-family:var(--font-mono);font-size:13px;color:var(--danger);text-align:center;padding:20px 0;">Error — try again later.</div>`
           : `<div style="font-family:var(--font-mono);font-size:13px;color:var(--danger);text-align:center;padding:20px 0;">Erreur — réessaie plus tard.</div>`;
         console.error(e);
@@ -3179,6 +3461,7 @@ function startArcane(c){
     }
   }
   runMinigameCountdown(() => {
+    if(myGen !== mgGen) return; // un autre mini-jeu a démarré pendant le décompte
     $('minigame-content').innerHTML = `
       <div class="arcane-target" id="arcane-target">?</div>
       <div class="bar-track" style="margin:10px 0;"><div class="bar-fill" id="arcane-timer" style="width:100%;background:var(--violet);"></div></div>
@@ -3186,6 +3469,54 @@ function startArcane(c){
       <div style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);margin-top:8px;" id="arcane-status">${currentLang==='en' ? `Round 1 / ${ARCANE_ROUNDS}` : `Manche 1 / ${ARCANE_ROUNDS}`}</div>
     `;
     playRound();
+  });
+}
+
+// ---------- Pont Phaser — Invocation (voir game/bridge.js et game/scenes/TrainingScene.js) ----------
+// Contrairement aux 3 autres, Phaser gère ici ENTIÈREMENT les 5 manches en interne (comme
+// la version DOM ci-dessus) — un seul appel serveur au tout final, avec le score cumulé.
+async function startArcaneWithFallback(c){
+  const myGen = ++mgGen;
+  let phaserReady = false;
+  try{
+    if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
+    await _phaserBridgeModule.Bridge.ensureLoaded();
+    phaserReady = _phaserBridgeModule.Bridge.isReady();
+  } catch(e){
+    console.warn('[Moltchi/Phaser] Pont indisponible pour l\'Invocation, fallback DOM :', e);
+  }
+  if(myGen !== mgGen) return;
+
+  if(!phaserReady){
+    startArcane(c); // ancien système DOM, INCHANGÉ
+    return;
+  }
+
+  $('minigame-area').style.display = 'block';
+  setMinigameTheme('water');
+  $('minigame-title').textContent = currentLang==='en' ? '🔮 Invocation — click the rune matching the one shown, before the timer runs out' : '🔮 Invocation — clique la rune identique à celle affichée, avant la fin du sablier';
+  const { Bridge } = _phaserBridgeModule;
+
+  runMinigameCountdown(() => {
+    if(myGen !== mgGen) return;
+    $('minigame-content').innerHTML = '';
+    const started = Bridge.startArcaneGame(async (result) => {
+      try{
+        const data = await performAction('train_arcane', { totalScore: result.totalScore });
+        creature = mergeDefaults(data.creature);
+        if(myGen !== mgGen) return;
+        const magicLabel = (currentLang==='en' ? STAT_LABEL_EN : STAT_LABEL).magic;
+        let msg = currentLang==='en' ? `Invocation complete — +${data.gain} ${magicLabel}` : `Invocation terminée — +${data.gain} ${magicLabel}`;
+        if(data.uniqueFound) msg += currentLang==='en' ? ` ✦ Moltyx found: ${itemDisplayName(data.uniqueFound)}!` : ` ✦ Moltyx trouvé : ${itemDisplayName(data.uniqueFound)} !`;
+        Bridge.showTrainingResult(msg);
+        renderCreature(creature);
+      } catch(e){
+        if(myGen === mgGen) Bridge.showTrainingResult(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.');
+        console.error(e);
+      }
+    });
+    if(!started) startArcane(c);
+    console.log(started ? '[Moltchi] Invocation → Phaser' : '[Moltchi] Invocation → fallback DOM');
   });
 }
 
@@ -3534,6 +3865,11 @@ function restoreFromCode(code, statusEl){
 
 let creature, myId, boss;
 async function init(){
+  // Écran de chargement plein écran tant que Phaser + les deux scènes ne sont pas prêts
+  // (voir #phaser-loading-overlay dans index.html, visible par défaut). Bloque le
+  // démarrage du reste de l'appli — mais jamais plus de PHASER_LOADING_TIMEOUT_MS, pour
+  // ne pas coincer le joueur si le réseau/CDN a un problème.
+  await preloadPhaserBlocking();
   const savedLang = await loadLanguage();
   applyLanguage(savedLang || 'fr');
   $('btn-pre-restore-recovery').onclick = () => {
@@ -3771,6 +4107,7 @@ async function startApp(){
       if(data.bossDefeatedNow) log(currentLang==='en'
         ? `${bossDef(boss2).name} is defeated! It respawns immediately — the weekly ranking continues.`
         : `${bossDef(boss2).name} est vaincu ! Il renaît aussitôt — le classement de la semaine continue.`, 'good');
+      playFxEffectSafe(Bridge => Bridge.playBossEffect({}));
       renderCreature(creature); renderBoss(boss2); renderLeaderboard(lb2, myId);
       await renderPendingBossRewards();
       log(currentLang==='en'
@@ -3783,10 +4120,10 @@ async function startApp(){
     }
   };
 
-  $('btn-start-reflex').onclick = () => startReflex(creature);
-  $('btn-start-memory').onclick = () => startMemory(creature);
-  $('btn-start-rhythm').onclick = () => startRhythm(creature);
-  $('btn-start-arcane').onclick = () => startArcane(creature);
+  $('btn-start-reflex').onclick = () => startReflexWithFallback(creature);
+  $('btn-start-memory').onclick = () => startMemoryWithFallback(creature);
+  $('btn-start-rhythm').onclick = () => startRhythmWithFallback(creature);
+  $('btn-start-arcane').onclick = () => startArcaneWithFallback(creature);
 
   $('btn-climb').onclick = async () => {
     const attemptsLeft = creature.dungeonDay === todayKey() ? Math.max(0, maxDungeonAttempts(creature) - creature.dungeonAttempts) : maxDungeonAttempts(creature);
@@ -3823,6 +4160,7 @@ async function startApp(){
       if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
       dungeonLog(msg, 'hit');
     }
+    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('dungeon-fx-stage', { won: !!data.win }));
     renderCreature(creature);
   };
 
@@ -3873,6 +4211,7 @@ async function startApp(){
       if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
       dungeonLog(msg, 'hit', 'corrupt-log');
     }
+    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('corrupt-fx-stage', { won: !!data.win }));
     renderCreature(creature);
   };
 
@@ -3923,14 +4262,18 @@ async function startApp(){
       if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
       dungeonLog(msg, 'hit', 'noyau-log');
     }
+    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('noyau-fx-stage', { won: !!data.win }));
     renderCreature(creature);
   };
 
+  // ---------- Pont Phaser — effets visuels ponctuels (Trésor/Donjons/Boss) ----------
   $('btn-dig').onclick = async () => {
     if(creature.treasureAP <= 0) return;
     try{
       const data = await performAction('treasure_dig', {});
       creature = mergeDefaults(data.creature);
+      const lastDig = (creature.treasureHistory || []).slice(-1)[0];
+      playFxEffectSafe(Bridge => Bridge.playTreasureEffect({ itemFound: !!(lastDig && lastDig.itemName) }));
       renderCreature(creature);
     } catch(e){ console.error(e); }
   };

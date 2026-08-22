@@ -65,5 +65,18 @@ export default class MainScene extends Phaser.Scene {
     this._video.loadURL(src, true); // noAudio:true -> autoplay possible sans interaction, comme l'ancien <video muted>
     this._video.play(false); // false = ne boucle pas (une seule lecture, comme avant)
   }
+
+  /**
+   * Interrompt immédiatement l'animation de soin en cours, si il y en a une. À appeler
+   * dès que le canvas partagé quitte #creature-stage pour une autre zone (mini-jeu,
+   * effet Trésor/Donjon/Boss...) — sinon cette scène continue de dessiner la vidéo (elle
+   * reste RUNNING en permanence, voir bridge.js), qui "suit" alors le canvas dans son
+   * nouveau conteneur au lieu de disparaître avec l'écran qu'elle animait.
+   */
+  stopCare(){
+    if(!this._video) return;
+    if(this._video.isPlaying()) this._video.stop();
+    this._video.setVisible(false);
+  }
 }
 

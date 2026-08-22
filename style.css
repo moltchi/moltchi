@@ -775,6 +775,21 @@
   #creature-stage{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;}
   #creature-stage canvas{display:block;width:100% !important;height:100% !important;}
 
+  /* Zone d'entraînement Phaser : contrairement à #creature-stage (overlay passif), celle-ci
+     EST la surface d'interaction quand Phaser gère le mini-jeu (clics captés par le canvas) —
+     donc pointer-events normal, pas none. Masquée par défaut ; seul bridge.js la révèle
+     (display:block) au moment où TrainingScene prend effectivement le relais, jamais avant —
+     sinon un espace vide resterait visible pendant que le fallback DOM classique est utilisé.*/
+  #training-stage{display:none;height:130px;border-radius:10px;overflow:hidden;margin:14px 0;}
+  #training-stage canvas{display:block;width:100% !important;height:100% !important;}
+
+  /* Scènes Phaser d'effets visuels ponctuels (Chasse au trésor, Donjons, Boss Mondial) —
+     contrairement à #training-stage, toujours visibles (pas de display:none) : ces
+     panneaux ne s'affichent que quand leur onglet est actif, donc le conteneur a déjà sa
+     vraie taille au moment où le joueur clique sur le bouton d'action. */
+  .fx-stage{height:64px;border-radius:10px;overflow:hidden;margin:10px 0;pointer-events:none;}
+  .fx-stage canvas{display:block;width:100% !important;height:100% !important;}
+
   /* ===================================================================
      RESPONSIVE — à conserver et étendre pour toute future modification.
      Le jeu doit rester pleinement jouable au doigt sur mobile (~360-430px

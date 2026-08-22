@@ -157,6 +157,16 @@
 -->
 </head>
 <body>
+<!-- ÉCRAN DE CHARGEMENT PHASER — visible par défaut dès l'arrivée sur la page (pas besoin
+     d'attendre le JS), masqué par app.js une fois Phaser + les scènes prêts (ou après un
+     délai de sécurité si le réseau traîne). Couvre tout, au-dessus de tout le reste. -->
+<div id="phaser-loading-overlay" style="position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at top,var(--moss-900),var(--moss-950) 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity 0.35s ease;">
+  <img src="media/moltchi.png" alt="Moltchi" style="max-width:170px;width:60%;">
+  <div style="width:220px;max-width:70vw;height:8px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;border:1px solid var(--moss-700);">
+    <div id="phaser-loading-bar" style="height:100%;width:4%;background:var(--gold);transition:width 0.3s ease;"></div>
+  </div>
+  <div id="phaser-loading-label" style="font-family:var(--font-mono);font-size:11px;color:var(--ivory-dim);letter-spacing:0.02em;">Chargement…</div>
+</div>
 <div class="fireflies" aria-hidden="true">
   <span class="firefly" style="left:4%;--dur:13s;--delay:0s;--drift:22px;"></span>
   <span class="firefly firefly-moss" style="left:14%;--dur:17s;--delay:2.5s;--drift:-30px;"></span>
@@ -417,6 +427,7 @@
     </div>
     <div class="card" id="minigame-area" style="display:none;">
       <h3 id="minigame-title"></h3>
+      <div id="training-stage"></div>
       <div id="minigame-content"></div>
     </div>
   </div>
@@ -433,6 +444,7 @@
         <div class="power-vs">VS</div>
         <div class="power-side"><div class="val" id="floor-power" style="color:var(--ember-bright);">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
       </div>
+      <div id="dungeon-fx-stage" class="fx-stage"></div>
       <div class="attempts-row">
         <div><div class="attempts-left" id="dungeon-attempts-text"></div><div class="pip-row" id="dungeon-pip-row"></div>
           <div class="attempts-left" id="dungeon-clears-text" style="margin-top:6px;"></div></div>
@@ -456,6 +468,7 @@
         <div class="power-vs">VS</div>
         <div class="power-side"><div class="val" id="corrupt-floor-power" style="color:#b060e0;">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
       </div>
+      <div id="corrupt-fx-stage" class="fx-stage"></div>
       <div class="attempts-row">
         <div><div class="attempts-left" id="corrupt-attempts-text"></div><div class="pip-row" id="corrupt-pip-row"></div>
           <div class="attempts-left" id="corrupt-clears-text" style="margin-top:6px;"></div></div>
@@ -480,6 +493,7 @@
         <div class="power-vs">VS</div>
         <div class="power-side"><div class="val" id="noyau-floor-power" style="color:#e0c060;">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
       </div>
+      <div id="noyau-fx-stage" class="fx-stage"></div>
       <div class="attempts-row">
         <div><div class="attempts-left" id="noyau-attempts-text"></div><div class="pip-row" id="noyau-pip-row"></div>
           <div class="attempts-left" id="noyau-clears-text" style="margin-top:6px;"></div></div>
@@ -505,6 +519,7 @@
       <p id="boss-affinities" style="font-size:12px;color:var(--ivory-dim);margin:-6px 0 8px;"></p>
       <div class="boss-header"><span class="boss-hp-text" id="boss-hp-text">-- / --</span><span class="boss-hp-text" id="boss-timer"></span></div>
       <div class="boss-track"><div class="boss-fill" id="boss-fill" style="width:100%"></div><div class="boss-pct" id="boss-pct">100%</div></div>
+      <div id="boss-fx-stage" class="fx-stage"></div>
       <div class="attempts-row">
         <div><div class="attempts-left" id="attempts-text">3 attaques restantes aujourd'hui</div><div class="pip-row" id="pip-row"></div></div>
         <button id="btn-attack" class="primary" data-i18n="btn_attack">⚔️ Attaquer</button>
@@ -624,6 +639,7 @@
       <div class="attempts-left" data-i18n="lbl_action_points" style="text-align:center;margin-top:14px;">Points d'action</div>
       <div class="pip-row" id="treasure-pip-row" style="margin:8px 0;justify-content:center;"></div>
       <div class="attempts-left" id="treasure-recharge-text" style="text-align:center;margin-bottom:12px;"></div>
+      <div id="treasure-fx-stage" class="fx-stage"></div>
       <div class="attempts-row">
         <div></div>
         <button id="btn-dig" class="primary big" data-i18n="btn_dig">⛏️ Fouiller (1 PA)</button>
