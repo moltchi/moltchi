@@ -17,7 +17,7 @@
 // le nettoie explicitement après usage (voir les _cleanup*() de chaque jeu).
 // ============================================================
 
-import Phaser from 'https://cdn.jsdelivr.net/npm/phaser@4.1.0/dist/phaser.esm.min.js';
+import Phaser from 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.esm.min.js';
 
 // Couleurs reprises des variables CSS utilisées par les mêmes mini-jeux en DOM
 // (voir style.css), pour un rendu cohérent entre les deux systèmes.

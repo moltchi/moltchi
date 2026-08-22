@@ -7,7 +7,7 @@
 // dégâts connus. Voir Bridge.playBossEffect().
 // ============================================================
 
-import Phaser from 'https://cdn.jsdelivr.net/npm/phaser@4.1.0/dist/phaser.esm.min.js';
+import Phaser from 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.esm.min.js';
 
 export default class BossScene extends Phaser.Scene {
   constructor(){
