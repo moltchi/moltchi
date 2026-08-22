@@ -37,14 +37,10 @@ export default class TrainingScene extends Phaser.Scene {
   constructor(){
     super('TrainingScene');
     this._resultCallback = null;
-    this._reflexZone = null;   // { rect, label, comboText, emberEmitter }
+    this._reflexZone = null;   // { rect, label }
     this._goTimeoutEvent = null;
     this._goTime = null;
     this._done = false;
-    // Combo Réflexe : nombre de bons réflexes enchaînés SANS "trop tôt" entre-deux.
-    // Vit sur l'instance de la scène (jamais détruite tant que la session dure), donc
-    // persiste d'une partie à l'autre — remis à zéro uniquement sur un clic trop tôt.
-    this._reflexCombo = 0;
 
     this._memoryZone = null;
     this._memoryResultCallback = null;
@@ -60,19 +56,6 @@ export default class TrainingScene extends Phaser.Scene {
 
   create(){
     this.cameras.main.setBackgroundColor('rgba(0,0,0,0)');
-    this._generateParticleTextures();
-  }
-
-  // Génère une petite texture de particule (cercle plein blanc, teinté à la volée via
-  // `tint` sur chaque émetteur) une seule fois — cette scène n'est jamais détruite
-  // pendant la session, donc pas besoin de régénérer à chaque partie.
-  _generateParticleTextures(){
-    if(this.textures.exists('mg-spark')) return;
-    const g = this.make.graphics({ x: 0, y: 0 }, false);
-    g.fillStyle(0xffffff, 1);
-    g.fillCircle(8, 8, 8);
-    g.generateTexture('mg-spark', 16, 16);
-    g.destroy();
   }
 
   // ---------- Réflexe ----------
@@ -85,8 +68,7 @@ export default class TrainingScene extends Phaser.Scene {
     this._done = false;
 
     const { width, height } = this.scale;
-    const zoneW = width - 8, zoneH = height - 8;
-    const rect = this.add.rectangle(width/2, height/2, zoneW, zoneH, COLOR_WAIT, 1)
+    const rect = this.add.rectangle(width/2, height/2, width - 8, height - 8, COLOR_WAIT, 1)
       .setStrokeStyle(2, COLOR_STROKE)
       .setInteractive({ useHandCursor: true });
     // Icône + texte sur deux lignes, comme le ::before + le texte de .reflex-zone en DOM
@@ -94,36 +76,14 @@ export default class TrainingScene extends Phaser.Scene {
     // deux systèmes (Phaser et fallback DOM).
     const label = this.add.text(width/2, height/2, '🔥\nAttends…', { fontSize: '16px', color: '#f4efe6', fontStyle: 'bold', align: 'center' })
       .setOrigin(0.5);
-
-    // Petit badge de combo, affiché seulement à partir de 2 bons réflexes d'affilée —
-    // pure ambiance, aucun impact sur le gain réel (calculé côté serveur).
-    const comboText = this.add.text(width - 10, 8, this._reflexCombo >= 2 ? `Combo x${this._reflexCombo}` : '', {
-      fontSize: '11px', color: '#ffce6e', fontStyle: 'bold',
-    }).setOrigin(1, 0);
-
-    // Braises qui montent doucement le long du bas de la zone pendant l'attente — pure
-    // ambiance "forge", s'arrête dès que la zone passe au vert.
-    const emberEmitter = this.add.particles(width/2, height/2 + zoneH/2 - 4, 'mg-spark', {
-      x: { min: width/2 - zoneW/2 + 12, max: width/2 + zoneW/2 - 12 },
-      lifespan: 850,
-      speedY: { min: -55, max: -85 },
-      speedX: { min: -10, max: 10 },
-      scale: { start: 0.45, end: 0 },
-      alpha: { start: 0.75, end: 0 },
-      tint: 0xe8845a,
-      frequency: 90,
-    });
-
-    this._reflexZone = { rect, label, comboText, emberEmitter };
+    this._reflexZone = { rect, label };
 
     const delay = 800 + Math.random() * 2200;
     this._goTimeoutEvent = this.time.delayedCall(delay, () => {
       this._goTime = Date.now();
       rect.setFillStyle(COLOR_GO);
       label.setText('⚡\nCLIQUE !');
-      emberEmitter.stop();
       this._flash(rect.x, rect.y, 0x3ecf6e);
-      this._burstParticles(rect.x, rect.y, 0x3ecf6e, 16);
     });
 
     rect.on('pointerdown', () => this._onReflexClick());
@@ -131,35 +91,21 @@ export default class TrainingScene extends Phaser.Scene {
 
   _onReflexClick(){
     if(this._done || !this._reflexZone) return;
-    const { rect, label, comboText, emberEmitter } = this._reflexZone;
+    const { rect, label } = this._reflexZone;
 
     if(this._goTime === null){
       // Trop tôt : annule le passage au vert et remonte l'échec, comme la version DOM.
       this._done = true;
       if(this._goTimeoutEvent) this._goTimeoutEvent.remove();
-      emberEmitter.stop();
       label.setText('Trop tôt !');
       this._shake(rect);
-      this._burstParticles(rect.x, rect.y, 0x7a2b2b, 8);
-      this._reflexCombo = 0;
-      comboText.setText('');
       if(this._resultCallback) this._resultCallback({ tooEarly: true });
       return;
     }
 
     this._done = true;
     const reactionMs = Date.now() - this._goTime;
-    const perfect = reactionMs < 220;
-    this._reflexCombo++;
-    comboText.setText(this._reflexCombo >= 2 ? `Combo x${this._reflexCombo}` : '');
-
-    this._flash(rect.x, rect.y, perfect ? 0xffce6e : 0xE2A63F);
-    this._burstParticles(rect.x, rect.y, perfect ? 0xffce6e : 0xE2A63F, perfect ? 22 : 14);
-    if(perfect){
-      const perfectLabel = this.add.text(rect.x, rect.y - 30, '✦ PARFAIT !', { fontSize: '13px', color: '#ffce6e', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0);
-      this.tweens.add({ targets: perfectLabel, alpha: 1, y: '-=14', duration: 200 });
-      this.tweens.add({ targets: perfectLabel, alpha: 0, delay: 500, duration: 250, onComplete: () => perfectLabel.destroy() });
-    }
+    this._flash(rect.x, rect.y, 0xE2A63F);
     if(this._resultCallback) this._resultCallback({ reactionMs });
   }
 
@@ -172,8 +118,6 @@ export default class TrainingScene extends Phaser.Scene {
     if(this._reflexZone){
       this._reflexZone.rect.destroy();
       this._reflexZone.label.destroy();
-      this._reflexZone.comboText.destroy();
-      this._reflexZone.emberEmitter.destroy();
       this._reflexZone = null;
     }
     this._resultCallback = null;
@@ -485,21 +429,5 @@ export default class TrainingScene extends Phaser.Scene {
       yoyo: true,
       repeat: 3,
     });
-  }
-
-  // Explosion ponctuelle de particules (impact de clic, révélation "GO", etc.) — utilise
-  // la texture générée une seule fois dans create(). Auto-nettoyée après sa durée de vie,
-  // pas besoin de la suivre dans un _cleanup*().
-  _burstParticles(x, y, tint, count = 14){
-    const emitter = this.add.particles(x, y, 'mg-spark', {
-      lifespan: 420,
-      speed: { min: 60, max: 190 },
-      scale: { start: 0.6, end: 0 },
-      alpha: { start: 1, end: 0 },
-      tint,
-      emitting: false,
-    });
-    emitter.explode(count, x, y);
-    this.time.delayedCall(500, () => emitter.destroy());
   }
 }
