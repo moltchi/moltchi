@@ -1671,7 +1671,7 @@ function totalPower(c){
 // NB : maxBossAttacks (Boss Mondial) est ici par proximité de code
 // historique, mais logiquement il appartient à la section Boss plus bas.
 // ============================================================
-function floorRequirement(floor){ return Math.round(50 * Math.pow(1.035, floor - 1)); }
+function floorRequirement(floor){ return Math.round(50 * Math.pow(1.040, floor - 1)); }
 function maxBossAttacks(c){ return c.species === 'Luminel' ? 4 : 3; }
 function maxDungeonAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour
 function maxDungeonClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour
@@ -1717,7 +1717,7 @@ function corruptUnlockEligible(c){ return c.dungeonFloor >= CORRUPT_UNLOCK_FLOOR
 // Facteur d'échelle objets ×11,67 conservé tel quel (calibré à l'origine, pas recalculé
 // avec la baisse du Sanctuaire — les objets du Noyau restent à leur valeur actuelle).
 // ⚠️ Toutes ces formules DOIVENT rester identiques entre app.js et perform-action.ts.
-function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.015, floor - 1)); }
+function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.019, floor - 1)); }
 function maxCorruptAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour — identique au Wyrm, par principe (voir note ci-dessus)
 function maxCorruptClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour — identique au Wyrm
 function corruptXP(floor){ return floor <= 100 ? 30 + floor * 2 : 30; } // au-delà de l'étage 100, le Noyau prend le relais côté XP
@@ -1732,7 +1732,7 @@ function isCorruptLootFloor(floor){ return floor % 5 === 0; }
 const NOYAU_UNLOCK_FLOOR = 100; // étage du SANCTUAIRE (pas de la Tour) à atteindre
 const NOYAU_UNLOCK_COST = 2000; // en Moltcoins
 function noyauUnlockEligible(c){ return (c.corruptFloor||1) >= NOYAU_UNLOCK_FLOOR; }
-function noyauFloorRequirement(floor){ return Math.round(corruptFloorRequirement(NOYAU_UNLOCK_FLOOR) * Math.pow(1.05, floor - 1)); }
+function noyauFloorRequirement(floor){ return Math.round(corruptFloorRequirement(NOYAU_UNLOCK_FLOOR) * Math.pow(1.03, floor - 1)); }
 function maxNoyauAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; }
 function maxNoyauClears(c){ return c.species === 'Epineombre' ? 11 : 10; }
 function noyauXP(floor){ return 45 + floor * 3; }
