@@ -8,8 +8,7 @@
 // JAMAIS d'un gain. Elle capte l'interaction du joueur (temps de réaction, case
 // cliquée, score total de l'Invocation...) et la remonte telle quelle via
 // `onResult` — c'est toujours app.js qui appelle performAction() et affiche le
-// résultat réel renvoyé par le serveur. Voir *WithFallback() dans app.js pour le
-// fallback DOM existant de chaque mini-jeu, jamais supprimé.
+// résultat réel renvoyé par le serveur.
 //
 // Cette scène partage le même canvas Phaser que MainScene (voir bridge.js/
 // _moveCanvasTo) mais les deux scènes restent actives en permanence (pas de
@@ -25,10 +24,8 @@ const COLOR_WAIT = 0x7a2b2b;    // --danger (zone Réflexe en attente)
 const COLOR_GO = 0x3ecf6e;      // vert vif de .reflex-zone.go
 const COLOR_STROKE = 0x4a2f74;  // --moss-700 (bordures)
 const COLOR_PANEL = 0x241a3a;   // fond des tuiles/pistes/boutons, façon --moss-800/950
-const COLOR_TEXT = 0xf4efe6;    // --ivory
 const COLOR_TEXT_DIM = '#c9b8de'; // --ivory-dim
 const COLOR_BLUE = 0x4e8aa8;    // --blue (Mémoire, thème Vent)
-const COLOR_GREEN_EARTH = 0x5fbf9a; // thème Terre (Rythme)
 const COLOR_GOLD = 0xe2a63f;    // --gold (zone dorée du Rythme)
 const COLOR_VIOLET = 0xb06fe0;  // --violet (Invocation, thème Eau)
 const COLOR_WRONG = 0x7a2b2b;   // --danger
@@ -229,7 +226,7 @@ export default class TrainingScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     const zoneW = trackWidth * 0.16;
     const zone = this.add.rectangle((trackLeft + trackRight) / 2, trackY, zoneW, trackH, COLOR_GOLD, 0.35);
-    const marker = this.add.rectangle(trackLeft, trackY, 4, trackH + 10, COLOR_TEXT, 1);
+    const marker = this.add.rectangle(trackLeft, trackY, 4, trackH + 10, 0xf4efe6, 1);
     const label = this.add.text(width / 2, height - 6, 'Clique au bon moment…', { fontSize: '12px', color: COLOR_TEXT_DIM })
       .setOrigin(0.5, 1);
     this._rhythmZone = { track, zone, marker, label, tickEvent: null };
