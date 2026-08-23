@@ -1605,7 +1605,7 @@ function totalPower(c){
 // La continuité est assurée en repartant de la valeur BRUTE (non arrondie) atteinte
 // à l'étage 100 avec le premier taux, plutôt que de recalculer depuis la base —
 // ça évite un saut de valeur au changement de palier.
-const DUNGEON_RATE_1 = 1.0422, DUNGEON_RATE_2 = 1.38, DUNGEON_RATE_SWITCH_FLOOR = 100;
+const DUNGEON_RATE_1 = 1.0422, DUNGEON_RATE_2 = 1.038, DUNGEON_RATE_SWITCH_FLOOR = 100;
 function floorRequirement(floor){
   const base = 50;
   if(floor <= DUNGEON_RATE_SWITCH_FLOOR) return Math.round(base * Math.pow(DUNGEON_RATE_1, floor - 1));
