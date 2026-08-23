@@ -971,10 +971,10 @@ function preloadPhaserInBackground(){
 // Contrairement à preloadPhaserInBackground() (qui ne fait que lancer le chargement sans
 // attendre), preloadPhaserBlocking() est utilisé au tout début de init() : l'écran
 // #phaser-loading-overlay (visible par défaut dans le HTML) reste affiché avec une vraie
-// barre de progression tant que Phaser + les deux scènes ne sont pas prêts, PUIS l'appli
-// se dévoile. Ainsi le joueur ne voit jamais un mini-jeu ou une animation de soin
-// retomber sur son fallback DOM juste par malchance de timing réseau — au pire, il
-// attend un peu plus longtemps à l'écran de chargement.
+// barre de progression tant que Phaser + les scènes ne sont pas prêts, PUIS l'appli se
+// dévoile. Comme il n'y a plus de fallback DOM pour les mini-jeux/animations de soin
+// (voir plus bas), c'est cet écran de chargement qui évite qu'un joueur clique sur une
+// action avant que Phaser ne soit prêt et ne se passe rien.
 const PHASER_LOADING_LABELS = {
   init:                 { fr: 'Démarrage…',              en: 'Starting up…' },
   downloading:          { fr: 'Chargement du moteur…',   en: 'Loading the game engine…' },
@@ -1005,9 +1005,10 @@ function hidePhaserLoadingOverlay(){
   setTimeout(() => { overlay.style.display = 'none'; }, 400);
 }
 // Délai de sécurité : au-delà, on arrête d'attendre Phaser et on démarre l'appli quand
-// même (fallback DOM existant pris en charge normalement par chaque fonction) — un
-// réseau capricieux ou un CDN bloqué ne doit jamais coincer le joueur sur l'écran de
-// chargement indéfiniment.
+// même — les actions Phaser (mini-jeux, animations de soin) ne feront simplement rien
+// tant qu'il ne sera pas prêt (plus de fallback DOM, voir playCareAnimation() plus haut)
+// — mais un réseau capricieux ou un CDN bloqué ne doit jamais coincer le joueur
+// indéfiniment sur l'écran de chargement.
 const PHASER_LOADING_TIMEOUT_MS = 8000;
 async function preloadPhaserBlocking(){
   try{
@@ -1152,31 +1153,6 @@ const CONSUMABLE_DB = [
   {id:'candy_treasure', name:'Bonbon Doré',          name_en:'Golden Candy',  icon:'🍯', key:'treasure', restore:3, desc:'Restaure 3 Points d\'Action de fouille', desc_en:'Restores 3 Treasure Hunt Action Points'},
   {id:'candy_training', name:'Bonbon Vif',           name_en:'Quick Candy',   icon:'🍥', key:'training', restore:4, desc:'Restaure 4 essais d\'entraînement', desc_en:'Restores 4 training attempts'},
 ];
-function consumeCandy(c, defId){
-  const def = CONSUMABLE_DB.find(x=>x.id===defId);
-  if(!def) return false;
-  if(!c.consumables || !c.consumables[defId] || c.consumables[defId] <= 0) return false;
-  c.consumables[defId] -= 1;
-  if(def.key === 'dungeon'){
-    if(c.dungeonDay !== todayKey()){ c.dungeonDay = todayKey(); c.dungeonAttempts = 0; }
-    c.dungeonAttempts = Math.max(0, c.dungeonAttempts - def.restore);
-  } else if(def.key === 'boss'){
-    if(c.lastAttackDay !== todayKey()){ c.lastAttackDay = todayKey(); c.attacksToday = 0; }
-    c.attacksToday = Math.max(0, c.attacksToday - def.restore);
-  } else if(def.key === 'treasure'){
-    c.treasureAP = Math.min(maxTreasureAP(c), (c.treasureAP||0) + def.restore);
-  } else if(def.key === 'training'){
-    if(c.trainDay !== todayKey()){ c.trainDay = todayKey(); c.trainCounts = {reflex:0,memory:0,rhythm:0,arcane:0}; }
-    let remain = def.restore;
-    const games = ['reflex','memory','rhythm','arcane'];
-    while(remain > 0){
-      const gk = games.reduce((a,b)=> (c.trainCounts[b]||0) > (c.trainCounts[a]||0) ? b : a);
-      if((c.trainCounts[gk]||0) <= 0) break;
-      c.trainCounts[gk] -= 1; remain -= 1;
-    }
-  }
-  return true;
-}
 
 // Montants Moltcoins calibrés sur BP_PREMIUM_COST_MOLTCOINS (voir calcul dans le chat) :
 // somme des gains gratuits = 375 (1/4 du prix), somme des gains premium = 750 (2/4 du prix),
@@ -1243,40 +1219,10 @@ function ensureBattlepass(c){
   if(bp.weekKey !== weekKey()){ bp.weekKey = weekKey(); bp.weeklyProgress = {}; bp.weeklyCompleted = []; }
   return bp;
 }
-// Appelée depuis les actions du jeu (soin, entraînement, donjon, boss, trésor) pour faire progresser les quêtes.
-function bpTrack(c, key, amount=1){
-  const bp = ensureBattlepass(c);
-  bp.dailyProgress[key] = (bp.dailyProgress[key]||0) + amount;
-  bp.weeklyProgress[key] = (bp.weeklyProgress[key]||0) + amount;
-  const dq = BP_DAILY_QUESTS.find(q=>q.id===key);
-  if(dq && !bp.dailyCompleted.includes(key) && bp.dailyProgress[key] >= dq.target){
-    bp.dailyCompleted.push(key); bp.xp += dq.points;
-  }
-  const wq = BP_WEEKLY_QUESTS.find(q=>q.id===key);
-  if(wq && !bp.weeklyCompleted.includes(key) && bp.weeklyProgress[key] >= wq.target){
-    bp.weeklyCompleted.push(key); bp.xp += wq.points;
-  }
-}
 function bpCurrentTier(xp){
   let tier = 0;
   for(const t of BATTLEPASS_TIERS){ if(xp >= t.xp) tier = t.tier; else break; }
   return tier;
-}
-function bpGrantReward(c, reward){
-  if(reward.type === 'coins'){ c.moltcoins = (c.moltcoins||0) + reward.amount; return `+${reward.amount} Moltcoins 🪙`; }
-  if(reward.type === 'consumable'){
-    const def = CONSUMABLE_DB.find(x=>x.id===reward.consumableId);
-    if(!def) return '';
-    if(!c.consumables) c.consumables = {};
-    c.consumables[def.id] = (c.consumables[def.id]||0) + (reward.qty||1);
-    return `${reward.qty||1}× ${def.icon} ${currentLang==='en' ? (def.name_en||def.name) : def.name}`;
-  }
-  const def = ITEM_DB.find(i=>i.id===reward.itemId);
-  if(!def) return '';
-  const uid = 'item_' + Date.now() + '_' + Math.floor(Math.random()*10000);
-  c.inventory.push({id:uid, defId:def.id, name:def.name, rarity:def.rarity, stat:def.stat, value:def.value, equipped:false});
-  const rLabel = currentLang==='en' ? RARITY_LABEL_EN : RARITY_LABEL;
-  return `${currentLang==='en' ? (def.name_en||def.name) : def.name} (${rLabel[def.rarity]})`;
 }
 // Pastille rouge Pass Saisonnier : vrai si au moins une récompense de palier
 // atteint reste à réclamer. Extrait en fonction réutilisable pour que le
@@ -1621,28 +1567,12 @@ function equippedSpecialBonus(c){
   });
   return bonus;
 }
-function statsToDamage(c, boss){
-  if(c.stage === 0) return 0;
-  const eq = equippedBonus(c);
-  const special = equippedSpecialBonus(c);
-  const wellbeing = (c.hunger + c.joy + c.energy) / 3;
-  let stats = { crit: c.crit + eq.crit, stamina: c.stamina + eq.stamina, magic: c.magic + eq.magic, dodge: c.dodge + eq.dodge };
-  if(boss) stats = applyBossAffinities(stats, boss);
-  // Même principe que la Puissance Donjon : somme des 4 stats équipées (affinités boss
-  // appliquées ci-dessus) × facteur de Bien-être.
-  const wellbeingFactor = 0.5 + (wellbeing/100)*0.6;
-  let dmg = (stats.crit + stats.magic + stats.stamina + stats.dodge) * wellbeingFactor;
-  if(c.species === 'Braisien') dmg *= 1.08;
-  if(special.bossDamagePct) dmg *= 1 + special.bossDamagePct/100;
-  // Une part d'aléatoire sur le résultat final (+/-15%) pour garder du suspense
-  dmg *= 0.85 + Math.random() * 0.3;
-  return Math.round(dmg);
-}
 // Dégâts moyens attendus par attaque contre le Boss Mondial, à partir des stats
-// actuelles — même formule que statsToDamage mais sans le tirage aléatoire final,
-// pour un affichage stable dans l'onglet Créature. `boss` (état courant, avec ses
-// affinités élémentaires) est optionnel : sans lui, l'estimation ignore juste la
-// faiblesse/résistance du boss du moment (ex: avant que le Boss ait été chargé).
+// actuelles — même formule que le calcul de dégâts réel côté serveur, mais sans le
+// tirage aléatoire final, pour un affichage stable dans l'onglet Créature. `boss`
+// (état courant, avec ses affinités élémentaires) est optionnel : sans lui,
+// l'estimation ignore juste la faiblesse/résistance du boss du moment (ex: avant que
+// le Boss ait été chargé).
 function estimatedDamage(c, boss){
   if(c.stage === 0) return 0;
   const eq = equippedBonus(c);
@@ -1754,16 +1684,6 @@ function noyauPower(c, floor){
   return Math.round((c.level*12 + statSum) * (0.5 + wellbeing/100*0.6));
 }
 
-function grantXP(c, amount){
-  c.xp += amount;
-  while(c.xp >= c.level * 50){
-    c.xp -= c.level * 50;
-    c.level += 1;
-    if(c.level >= 5 && c.stage < 2) c.stage = 2;
-    if(c.level >= 15 && c.stage < 3) c.stage = 3; // Adolescent — seuil choisi selon l'économie d'XP (~jour 13 en jeu assidu)
-    c.hunger = 100; c.joy = 100; c.energy = 100;
-  }
-}
 // Note : les valeurs de stats des objets viennent directement d'ITEM_DB / CORRUPT_ITEM_DB
 // (20/55/130/280 selon rareté), pas d'une table générique — RARITY_VALUE a été retirée
 // car elle n'était plus utilisée nulle part dans le code.
@@ -1815,7 +1735,7 @@ const BOSS_LIST = [
 ];
 function bossDef(boss){ return BOSS_LIST.find(b => b.id === boss?.bossId) || BOSS_LIST[0]; }
 // Applique la faiblesse (+20%) et la résistance (-10%) élémentaires du boss courant aux 4
-// stats combinées (créature + équipement), avant de les sommer dans statsToDamage.
+// stats combinées (créature + équipement), avant de les sommer dans estimatedDamage.
 function applyBossAffinities(stats, boss){
   const def = bossDef(boss);
   const weakStat = ELEMENT_TO_STAT[def.weakness];
@@ -1868,9 +1788,6 @@ const BOSS_RANK_TIERS = [
   {min:11,  max:100,      xp:80,  moltcoins:100, moltyxChance:0.00889 },
   {min:101, max:Infinity, xp:30,  moltcoins:30,  moltyxChance:0.00296 },
 ];
-function bossTierForRank(rank){
-  return BOSS_RANK_TIERS.find(t => rank >= t.min && rank <= t.max) || BOSS_RANK_TIERS[BOSS_RANK_TIERS.length-1];
-}
 function bossTierLabel(rank){
   if(rank === 1) return '#1';
   if(rank <= 10) return '#2-10';
