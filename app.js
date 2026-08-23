@@ -1601,7 +1601,17 @@ function totalPower(c){
 // NB : maxBossAttacks (Boss Mondial) est ici par proximité de code
 // historique, mais logiquement il appartient à la section Boss plus bas.
 // ============================================================
-function floorRequirement(floor){ return Math.round(50 * Math.pow(1.040, floor - 1)); }
+// Taux à deux paliers : 1.0422 jusqu'à l'étage 100 inclus, puis 1.040 au-delà.
+// La continuité est assurée en repartant de la valeur BRUTE (non arrondie) atteinte
+// à l'étage 100 avec le premier taux, plutôt que de recalculer depuis la base —
+// ça évite un saut de valeur au changement de palier.
+const DUNGEON_RATE_1 = 1.0422, DUNGEON_RATE_2 = 1.040, DUNGEON_RATE_SWITCH_FLOOR = 100;
+function floorRequirement(floor){
+  const base = 50;
+  if(floor <= DUNGEON_RATE_SWITCH_FLOOR) return Math.round(base * Math.pow(DUNGEON_RATE_1, floor - 1));
+  const atSwitch = base * Math.pow(DUNGEON_RATE_1, DUNGEON_RATE_SWITCH_FLOOR - 1);
+  return Math.round(atSwitch * Math.pow(DUNGEON_RATE_2, floor - DUNGEON_RATE_SWITCH_FLOOR));
+}
 function maxBossAttacks(c){ return c.species === 'Luminel' ? 4 : 3; }
 function maxDungeonAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour
 function maxDungeonClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour
@@ -1647,7 +1657,16 @@ function corruptUnlockEligible(c){ return c.dungeonFloor >= CORRUPT_UNLOCK_FLOOR
 // Facteur d'échelle objets ×11,67 conservé tel quel (calibré à l'origine, pas recalculé
 // avec la baisse du Sanctuaire — les objets du Noyau restent à leur valeur actuelle).
 // ⚠️ Toutes ces formules DOIVENT rester identiques entre app.js et perform-action.ts.
-function corruptFloorRequirement(floor){ return Math.round(floorRequirement(CORRUPT_UNLOCK_FLOOR) * Math.pow(1.019, floor - 1)); }
+// Taux à deux paliers pour le Sanctuaire : 1.023 jusqu'à l'étage 100 inclus, puis 1.019
+// au-delà. Même principe de continuité que floorRequirement ci-dessus (repartir de la
+// valeur brute non arrondie atteinte au palier plutôt que recalculer depuis la base).
+const CORRUPT_RATE_1 = 1.023, CORRUPT_RATE_2 = 1.019, CORRUPT_RATE_SWITCH_FLOOR = 100;
+function corruptFloorRequirement(floor){
+  const base = floorRequirement(CORRUPT_UNLOCK_FLOOR);
+  if(floor <= CORRUPT_RATE_SWITCH_FLOOR) return Math.round(base * Math.pow(CORRUPT_RATE_1, floor - 1));
+  const atSwitch = base * Math.pow(CORRUPT_RATE_1, CORRUPT_RATE_SWITCH_FLOOR - 1);
+  return Math.round(atSwitch * Math.pow(CORRUPT_RATE_2, floor - CORRUPT_RATE_SWITCH_FLOOR));
+}
 function maxCorruptAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; } // plafond d'ÉCHECS/jour — identique au Wyrm, par principe (voir note ci-dessus)
 function maxCorruptClears(c){ return c.species === 'Epineombre' ? 11 : 10; } // plafond de RÉUSSITES/jour — identique au Wyrm
 function corruptXP(floor){ return floor <= 100 ? 30 + floor * 2 : 30; } // au-delà de l'étage 100, le Noyau prend le relais côté XP
