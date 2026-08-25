@@ -197,6 +197,14 @@ function _moveCanvasTo(containerId){
     const mainScene = _game.scene.getScene('MainScene');
     if(mainScene && typeof mainScene.stopCare === 'function') mainScene.stopCare();
   }
+  if(containerId !== 'boss-fx-stage'){
+    // Même raison d'être que stopCare() ci-dessus : sans ça, l'animation idle du boss
+    // (BossScene reste RUNNING en permanence, voir la note plus bas) continuerait de
+    // dessiner son sprite, qui "suivrait" le canvas dans son nouveau conteneur au lieu de
+    // disparaître avec #boss-portrait-wrap.
+    const bossScene = _game.scene.getScene('BossScene');
+    if(bossScene && typeof bossScene.stopIdle === 'function') bossScene.stopIdle();
+  }
   container.appendChild(_game.canvas);
   _game.scale.resize(container.clientWidth || 300, container.clientHeight || 300);
   return true;
@@ -321,9 +329,101 @@ function playDungeonEffect(containerId, result){ return _playFxEffect(containerI
 /** @param {{ crit?: boolean }} [result] */
 function playBossEffect(result){ return _playFxEffect('boss-fx-stage', 'BossScene', 'playAttack', result); }
 
+/**
+ * Affiche/actualise l'animation idle en boucle du boss actuellement actif dans
+ * #boss-portrait-wrap. Aucun portrait statique de secours : si Phaser est indisponible ou
+ * si le spritesheet échoue à charger, #boss-portrait-wrap reste simplement vide — voir
+ * BossScene.showIdle(). À appeler à chaque fois que l'onglet Boss devient actif, et après
+ * chaque attaque (le boss peut avoir changé suite à un reset hebdomadaire). Purement
+ * visuel, aucune incidence sur la logique de jeu.
+ * @param {string} bossId - un des ids de BOSS_LIST (ver_cendres, kraken_brumes, ...).
+ * @returns {boolean} true si Phaser gère l'affichage ; false si rien n'a pu être fait
+ *   (Phaser indisponible) — #boss-portrait-wrap reste alors vide.
+ */
+function showBossIdle(bossId){
+  if(!_ready || !_game || !bossId) return false;
+  const scene = _game.scene.getScene('BossScene');
+  if(!scene || typeof scene.showIdle !== 'function') return false;
+  if(!_moveCanvasTo('boss-fx-stage')) return false;
+  scene.showIdle(bossId);
+  return true;
+}
+
+/**
+ * Bascule le boss actuellement affiché sur son animation "coup subi" (jouée une fois),
+ * qui revient automatiquement à l'idle une fois terminée — voir BossScene.showAttacked().
+ * L'éclair de playBossEffect() reste indépendant et continue de se rejouer par-dessus,
+ * qu'on l'appelle avant, après ou en même temps que celle-ci. Ne pas appeler si le boss
+ * vient de tourner (reset hebdomadaire) : il n'a alors pas réellement été touché — voir la
+ * note dans app.js sur data.resetHappened.
+ * @param {string} bossId - un des ids de BOSS_LIST (ver_cendres, kraken_brumes, ...).
+ * @returns {boolean} true si Phaser gère l'affichage ; false si rien n'a pu être fait.
+ */
+function showBossAttacked(bossId){
+  if(!_ready || !_game || !bossId) return false;
+  const scene = _game.scene.getScene('BossScene');
+  if(!scene || typeof scene.showAttacked !== 'function') return false;
+  if(!_moveCanvasTo('boss-fx-stage')) return false;
+  scene.showAttacked(bossId);
+  return true;
+}
+
+/**
+ * Précharge en tâche de fond (sans rien afficher, sans déplacer le canvas partagé) le
+ * spritesheet idle du boss donné, si Phaser est prêt. Purement une optimisation : permet à
+ * showBossIdle() d'être quasi instantané au moment où le joueur ouvre l'onglet Boss pour la
+ * première fois, plutôt que de télécharger le PNG à ce moment précis. Contrairement à
+ * showBossIdle(), ne touche PAS au canvas — sûr à appeler dès le chargement de l'appli
+ * (dès que le boss de la semaine est connu), avant même que le joueur n'ait ouvert cet
+ * onglet, sans voler la place à la carte créature ou à un mini-jeu en cours.
+ * @param {string} bossId - un des ids de BOSS_LIST (ver_cendres, kraken_brumes, ...).
+ * @returns {boolean} true si la demande de préchargement a été transmise à Phaser ; false
+ *   si Phaser n'est pas prêt (rien de grave, showBossIdle() téléchargera à la demande le
+ *   moment venu).
+ */
+function preloadBossIdle(bossId){
+  if(!_ready || !_game || !bossId) return false;
+  const scene = _game.scene.getScene('BossScene');
+  if(!scene || typeof scene.preloadIdle !== 'function') return false;
+  scene.preloadIdle(bossId, 'idle');
+  return true;
+}
+
+/**
+ * Même principe que preloadBossIdle(), mais pour le spritesheet "coup subi". Permet à
+ * showBossAttacked() d'être instantané dès la première attaque, plutôt que de découvrir le
+ * téléchargement au moment précis où le joueur clique Attaquer.
+ * @param {string} bossId
+ * @returns {boolean}
+ */
+function preloadBossAttacked(bossId){
+  if(!_ready || !_game || !bossId) return false;
+  const scene = _game.scene.getScene('BossScene');
+  if(!scene || typeof scene.preloadIdle !== 'function') return false;
+  scene.preloadIdle(bossId, 'attacked');
+  return true;
+}
+
+/**
+ * Précharge en tâche de fond (sans rien afficher) le sprite de slash partagé
+ * (media/attackboss_slash.png, voir BossScene.playAttack()). Contrairement à
+ * preloadBossIdle/preloadBossAttacked, ne prend PAS de bossId : c'est un effet unique
+ * commun à tous les boss, pas une variante par boss. Sûr à appeler dès que Phaser est prêt,
+ * indépendamment du boss de la semaine.
+ * @returns {boolean}
+ */
+function preloadBossSlash(){
+  if(!_ready || !_game) return false;
+  const scene = _game.scene.getScene('BossScene');
+  if(!scene || typeof scene.preloadSlash !== 'function') return false;
+  scene.preloadSlash();
+  return true;
+}
+
 export const Bridge = {
   isReady, ensureLoaded, playCareAnimation,
   startReflexGame, startMemoryGame, startRhythmGame, startArcaneGame,
   showTrainingResult, stopTrainingGame,
   playTreasureEffect, playDungeonEffect, playBossEffect,
+  showBossIdle, showBossAttacked, preloadBossIdle, preloadBossAttacked, preloadBossSlash,
 };
