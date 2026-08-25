@@ -666,6 +666,10 @@ document.querySelectorAll('.tab').forEach(tab=>{
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     tab.classList.add('active');
     $('panel-' + tab.dataset.tab).classList.add('active');
+    // Idle Phaser du boss superposé au portrait statique : ne se déclenche qu'à l'ouverture
+    // de l'onglet (pas à chaque rendu), pour ne pas voler le canvas partagé à une autre
+    // zone (soin, mini-jeu...) tant que le joueur ne regarde pas vraiment le Boss.
+    if(tab.dataset.tab === 'boss' && boss) playFxEffectSafe(Bridge => Bridge.showBossIdle(boss.bossId));
     const dropdown = tab.closest('.tab-dropdown');
     if(dropdown){
       const group = dropdown.closest('.tab-group');
@@ -1747,10 +1751,10 @@ const ELEMENT_CYCLE = ['feu','vent','terre','eau'];
 const ELEMENT_LABEL = { terre:'Terre', vent:'Vent', eau:'Eau', feu:'Feu' };
 const ELEMENT_LABEL_EN = { terre:'Earth', vent:'Wind', eau:'Water', feu:'Fire' };
 const BOSS_LIST = [
-  { id:'ver_cendres',         name:'Le Ver-des-Cendres',         element:'feu',   weakness:'eau',  resistance:'vent',  image:'media/verdescendres.png', fallbackIcon:'🐉' },
-  { id:'kraken_brumes',       name:'Le Kraken des Brumes',       element:'eau',   weakness:'terre', resistance:'feu',  image:'media/kraken.png',        fallbackIcon:'🐙' },
-  { id:'golem_granit',        name:'Le Golem de Granit',         element:'terre', weakness:'vent',  resistance:'eau',  image:'media/golem.png',         fallbackIcon:'🗿' },
-  { id:'spectre_bourrasques', name:'Le Spectre des Bourrasques', element:'vent',  weakness:'feu',   resistance:'terre',image:'media/spectre.png',       fallbackIcon:'👻' },
+  { id:'ver_cendres',         name:'Le Ver-des-Cendres',         element:'feu',   weakness:'eau',  resistance:'vent' },
+  { id:'kraken_brumes',       name:'Le Kraken des Brumes',       element:'eau',   weakness:'terre', resistance:'feu' },
+  { id:'golem_granit',        name:'Le Golem de Granit',         element:'terre', weakness:'vent',  resistance:'eau' },
+  { id:'spectre_bourrasques', name:'Le Spectre des Bourrasques', element:'vent',  weakness:'feu',   resistance:'terre' },
 ];
 function bossDef(boss){ return BOSS_LIST.find(b => b.id === boss?.bossId) || BOSS_LIST[0]; }
 // Applique la faiblesse (+20%) et la résistance (-10%) élémentaires du boss courant aux 4
@@ -2570,17 +2574,6 @@ function renderBoss(boss){
   $('boss-affinities').textContent = currentLang==='en'
     ? `Weak against ${elLabel[def.weakness]} (+20% damage taken) · Resists ${elLabel[def.resistance]} (-10% damage taken)`
     : `Faible contre ${elLabel[def.weakness]} (+20% dégâts subis) · Résiste à ${elLabel[def.resistance]} (-10% dégâts subis)`;
-  const portraitImg = $('boss-portrait');
-  const portraitFallback = $('boss-portrait-fallback');
-  portraitFallback.textContent = def.fallbackIcon || '🐉';
-  if(def.image){
-    portraitImg.src = def.image;
-    portraitImg.onerror = () => { portraitImg.style.display = 'none'; portraitFallback.style.display = 'block'; };
-    portraitImg.onload = () => { portraitImg.style.display = 'block'; portraitFallback.style.display = 'none'; };
-    portraitImg.style.display = 'block'; portraitFallback.style.display = 'none';
-  } else {
-    portraitImg.style.display = 'none'; portraitFallback.style.display = 'block';
-  }
   const pct = Math.max(0, Math.round((boss.hp / boss.maxHp) * 100));
   $('boss-fill').style.width = pct + '%';
   $('boss-pct').textContent = pct + '%';
@@ -3472,6 +3465,17 @@ async function startApp(){
 
   boss = await loadBoss();
   renderBoss(boss);
+  // Précharge en tâche de fond les spritesheets idle + attacked du boss de la semaine, dès
+  // qu'on connaît son id — pour que l'ouverture de l'onglet Boss ET la première attaque
+  // soient quasi instantanées, plutôt que de télécharger les PNG au moment précis. Ne
+  // déplace pas le canvas partagé (voir Bridge.preloadBossIdle/preloadBossAttacked), donc
+  // sans effet sur le reste de l'appli. Non bloquant, échec silencieux comme le reste des
+  // effets Phaser optionnels.
+  playFxEffectSafe(Bridge => Bridge.preloadBossIdle(boss.bossId));
+  playFxEffectSafe(Bridge => Bridge.preloadBossAttacked(boss.bossId));
+  // Slash partagé (media/attackboss_slash.png, voir playAttack() dans BossScene.js) : pas
+  // besoin de bossId, un seul fichier commun à tous les boss.
+  playFxEffectSafe(Bridge => Bridge.preloadBossSlash());
   const lb = await loadLeaderboard();
   renderLeaderboard(lb, myId);
   await renderPendingBossRewards();
@@ -3623,6 +3627,13 @@ async function startApp(){
         ? `${bossDef(boss2).name} is defeated! It respawns immediately — the weekly ranking continues.`
         : `${bossDef(boss2).name} est vaincu ! Il renaît aussitôt — le classement de la semaine continue.`, 'good');
       playFxEffectSafe(Bridge => Bridge.playBossEffect({}));
+      // Le boss vient-il de tourner (reset hebdomadaire déclenché par CETTE attaque, voir
+      // resetHappened dans attack-boss.ts) ? Si oui, le nouveau boss n'a pas réellement été
+      // touché — on réaffiche juste son idle. Sinon (même boss, qu'il ait été achevé et
+      // respawné à pleine vie ou non — voir bossDefeatedNow), on joue bien l'animation
+      // "coup subi", qui revient automatiquement à l'idle une fois terminée.
+      if(data.resetHappened) playFxEffectSafe(Bridge => Bridge.showBossIdle(boss2.bossId));
+      else playFxEffectSafe(Bridge => Bridge.showBossAttacked(boss2.bossId));
       renderCreature(creature); renderBoss(boss2); renderLeaderboard(lb2, myId);
       await renderPendingBossRewards();
       log(currentLang==='en'
