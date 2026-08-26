@@ -118,7 +118,12 @@
     jour du hash casserait le jeu sans aucun message visible pour les joueurs). La CSP
     protège quand même : seuls 'self' et le CDN Supabase peuvent charger des ressources,
     tout appel vers un domaine tiers non listé reste bloqué.
-  - style-src : 'unsafe-inline' nécessaire vu le nombre de style="" inline dans ce fichier.
+  - style-src : 'unsafe-inline' nécessaire vu le nombre de style="" inline dans ce fichier
+    + fonts.googleapis.com (feuille de style Google Fonts, police pixel du HUD de combat
+    Boss — voir game/scenes/BossScene.js FONT_FAMILY).
+  - font-src : fonts.gstatic.com, où les fichiers de police (.woff2) référencés par cette
+    feuille de style sont réellement hébergés — sans ça, la CSS charge mais les fichiers de
+    police eux-mêmes restent bloqués.
   - connect-src : uniquement ton projet Supabase (API + Edge Functions).
   Idéalement, cette même politique devrait aussi être envoyée en vrai en-tête HTTP
   (Content-Security-Policy) par ton hébergeur — la balise <meta> ne peut pas tout faire
@@ -132,7 +137,7 @@
   devant en proxy DNS et d'ajouter ces en-têtes via une Transform Rule ("Modify Response
   Header") — voir la conversation du 8 août 2026 pour la procédure complète.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://oouqtclsffybeloulvph.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://oouqtclsffybeloulvph.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title data-i18n="page_title">Moltchi — Simulateur RPG d'animal virtuel</title>
 <link rel="icon" type="image/png" href="media/moltchi.png">
