@@ -1819,10 +1819,10 @@ const ELEMENT_CYCLE = ['feu','vent','terre','eau'];
 const ELEMENT_LABEL = { terre:'Terre', vent:'Vent', eau:'Eau', feu:'Feu' };
 const ELEMENT_LABEL_EN = { terre:'Earth', vent:'Wind', eau:'Water', feu:'Fire' };
 const BOSS_LIST = [
-  { id:'ver_cendres',         name:'Le Ver-des-Cendres',         element:'feu',   weakness:'eau',  resistance:'vent' },
-  { id:'kraken_brumes',       name:'Le Kraken des Brumes',       element:'eau',   weakness:'terre', resistance:'feu' },
-  { id:'golem_granit',        name:'Le Golem de Granit',         element:'terre', weakness:'vent',  resistance:'eau' },
-  { id:'spectre_bourrasques', name:'Le Spectre des Bourrasques', element:'vent',  weakness:'feu',   resistance:'terre' },
+  { id:'ver_cendres',         name:'Le Ver-des-Cendres',         name_en:'The Ash-Worm',       element:'feu',   weakness:'eau',  resistance:'vent' },
+  { id:'kraken_brumes',       name:'Le Kraken des Brumes',       name_en:'The Misty Kraken',    element:'eau',   weakness:'terre', resistance:'feu' },
+  { id:'golem_granit',        name:'Le Golem de Granit',         name_en:'The Granite Golem',   element:'terre', weakness:'vent',  resistance:'eau' },
+  { id:'spectre_bourrasques', name:'Le Spectre des Bourrasques', name_en:'The Gale Spectre',    element:'vent',  weakness:'feu',   resistance:'terre' },
 ];
 function bossDef(boss){ return BOSS_LIST.find(b => b.id === boss?.bossId) || BOSS_LIST[0]; }
 // Applique la faiblesse (+20%) et la résistance (-10%) élémentaires du boss courant aux 4
@@ -2644,7 +2644,8 @@ function renderBoss(boss){
   if(!boss) return; // peut être appelé (via renderCreature) avant que loadBoss() ait résolu
   const def = bossDef(boss);
   const elLabel = currentLang === 'en' ? ELEMENT_LABEL_EN : ELEMENT_LABEL;
-  const name = def.name + (boss.kills > 0 ? (currentLang==='en' ? ` (defeated ${boss.kills}x)` : ` (vaincu ${boss.kills}x)`) : '');
+  const bossName = currentLang==='en' ? (def.name_en || def.name) : def.name;
+  const name = bossName + (boss.kills > 0 ? (currentLang==='en' ? ` (defeated ${boss.kills}x)` : ` (vaincu ${boss.kills}x)`) : '');
   const affinities = currentLang==='en'
     ? `Weak against ${elLabel[def.weakness]} (+20% damage taken) · Resists ${elLabel[def.resistance]} (-10% damage taken)`
     : `Faible contre ${elLabel[def.weakness]} (+20% dégâts subis) · Résiste à ${elLabel[def.resistance]} (-10% dégâts subis)`;
@@ -2722,9 +2723,12 @@ async function handleBossAttackClick(){
       achievements = data.achievements;
       if(data.newlyUnlocked && data.newlyUnlocked.length) showAchievementToasts(data.newlyUnlocked);
     }
-    if(data.bossDefeatedNow) pushBossFightLog(currentLang==='en'
-      ? `${bossDef(boss2).name} is defeated! It respawns immediately.`
-      : `${bossDef(boss2).name} est vaincu ! Il renaît aussitôt.`);
+    if(data.bossDefeatedNow){
+      const defeatedDef = bossDef(boss2);
+      pushBossFightLog(currentLang==='en'
+        ? `${defeatedDef.name_en || defeatedDef.name} is defeated! It respawns immediately.`
+        : `${defeatedDef.name} est vaincu ! Il renaît aussitôt.`);
+    }
     playFxEffectSafe(Bridge => Bridge.playBossEffect({}));
     // Le boss vient-il de tourner (reset hebdomadaire déclenché par CETTE attaque, voir
     // resetHappened dans attack-boss.ts) ? Si oui, le nouveau boss n'a pas réellement été
