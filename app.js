@@ -1685,7 +1685,9 @@ function isCorruptLootFloor(floor){ return floor % 5 === 0; }
 const NOYAU_UNLOCK_FLOOR = 100; // étage du SANCTUAIRE (pas de la Tour) à atteindre
 const NOYAU_UNLOCK_COST = 2000; // en Moltcoins
 function noyauUnlockEligible(c){ return (c.corruptFloor||1) >= NOYAU_UNLOCK_FLOOR; }
-function noyauFloorRequirement(floor){ return Math.round(corruptFloorRequirement(NOYAU_UNLOCK_FLOOR) * Math.pow(1.03, floor - 1)); }
+// Base fixe à 15 000 pour l'étage 1 du Noyau, indépendante du Sanctuaire (auparavant calée
+// sur corruptFloorRequirement(NOYAU_UNLOCK_FLOOR)). ⚠️ DOIT rester identique à perform-action.ts.
+function noyauFloorRequirement(floor){ return Math.round(15000 * Math.pow(1.03, floor - 1)); }
 function maxNoyauAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; }
 function maxNoyauClears(c){ return c.species === 'Epineombre' ? 11 : 10; }
 function noyauXP(floor){ return 45 + floor * 3; }
