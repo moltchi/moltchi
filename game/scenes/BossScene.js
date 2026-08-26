@@ -271,7 +271,7 @@ export default class BossScene extends Phaser.Scene {
   _buildMobileUI(width, height, fp, stroke){
     const nameSize = fp(0.026, 7, 10);
     const timerSize = fp(0.020, 6, 8);
-    const hpTextSize = fp(0.024, 7, 9);
+    const hpTextSize = fp(0.020, 6, 8);
     const attemptsSize = fp(0.020, 6, 8);
     const logSize = fp(0.020, 6, 8);
     const weaknessIconSize = fp(0.065, 16, 24);
