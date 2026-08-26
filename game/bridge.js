@@ -420,10 +420,75 @@ function preloadBossSlash(){
   return true;
 }
 
+/**
+ * Affiche/actualise le HUD de combat complet du Boss (nom, affinités, PV, minuteur,
+ * tentatives restantes, log, bouton Attaquer interactif) — voir BossScene.showBattleUI().
+ * Contrairement aux autres effets Boss, celui-ci EST interactif : le clic sur le bouton
+ * appelle data.onAttack fourni par app.js (qui fait le vrai appel réseau vers attack-boss).
+ * Ne touche pas au corps du boss (idle/attacked) — à appeler séparément via
+ * showBossIdle()/showBossAttacked(), voir la note dans BossScene.js.
+ * @param {object} data - voir la JSDoc de BossScene.showBattleUI() pour la forme exacte.
+ * @returns {boolean} true si Phaser gère l'affichage ; false si rien n'a pu être fait.
+ */
+function showBossBattleUI(data){
+  if(!_ready || !_game || !data) return false;
+  const scene = _game.scene.getScene('BossScene');
+  if(!scene || typeof scene.showBattleUI !== 'function') return false;
+  if(!_moveCanvasTo('boss-fx-stage')) return false;
+  scene.showBattleUI(data);
+  return true;
+}
+
+/**
+ * Met à jour uniquement la barre de vie (transition animée), sans reconstruire tout le HUD
+ * — utile pour un rafraîchissement ponctuel. showBossBattleUI() suffit dans la plupart des
+ * cas (elle appelle déjà setHp en interne) ; celle-ci existe pour un contrôle plus fin si
+ * besoin plus tard.
+ * @param {number} hp @param {number} maxHp
+ * @returns {boolean}
+ */
+function setBossHp(hp, maxHp){
+  if(!_ready || !_game) return false;
+  const scene = _game.scene.getScene('BossScene');
+  if(!scene || typeof scene.setHp !== 'function') return false;
+  scene.setHp(hp, maxHp);
+  return true;
+}
+
+/**
+ * Précharge en tâche de fond les assets FIXES du HUD de combat (fond, cadre HP, panneau
+ * log, bouton, gemmes) — indépendant du boss, une seule fois pour toute la session. Sûr à
+ * appeler dès que Phaser est prêt, sans attendre de connaître le boss de la semaine.
+ * @returns {boolean}
+ */
+function preloadBossBattleUIAssets(){
+  if(!_ready || !_game) return false;
+  const scene = _game.scene.getScene('BossScene');
+  if(!scene || typeof scene.preloadBattleUIAssets !== 'function') return false;
+  scene.preloadBattleUIAssets();
+  return true;
+}
+
+/**
+ * Reprend explicitement le canvas partagé sur #creature-stage, SANS jouer d'animation de
+ * soin (contrairement à playCareAnimation). À appeler à chaque fois qu'un onglet SANS
+ * usage de Phaser redevient actif (ex. "Ma créature" hors soin) — sinon le canvas reste
+ * parenté dans le dernier conteneur utilisé (ex. boss-fx-stage), qui devrait être masqué
+ * par le panel inactif (display:none) mais peut ne pas suffire selon le navigateur/état —
+ * voir la conversation sur ce bug. Idempotent et sans effet si Phaser n'est pas prêt.
+ * @returns {boolean}
+ */
+function reclaimCreatureStage(){
+  if(!_ready || !_game) return false;
+  _moveCanvasTo('creature-stage');
+  return true;
+}
+
 export const Bridge = {
   isReady, ensureLoaded, playCareAnimation,
   startReflexGame, startMemoryGame, startRhythmGame, startArcaneGame,
   showTrainingResult, stopTrainingGame,
   playTreasureEffect, playDungeonEffect, playBossEffect,
   showBossIdle, showBossAttacked, preloadBossIdle, preloadBossAttacked, preloadBossSlash,
+  showBossBattleUI, setBossHp, preloadBossBattleUIAssets, reclaimCreatureStage,
 };
