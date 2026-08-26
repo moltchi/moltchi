@@ -194,7 +194,7 @@ export default class BossScene extends Phaser.Scene {
     const timerSize = fp(0.016, 8, 14);
     const hpTextSize = fp(0.015, 8, 15);
     const attemptsSize = fp(0.016, 8, 14);
-    const logSize = fp(0.017, 9, 16);
+    const logSize = fp(0.015, 8, 14);
 
     // --- Cadre HP bar, haut gauche ---
     const hpDisplayW = Math.min(460, width * 0.44);
@@ -269,12 +269,12 @@ export default class BossScene extends Phaser.Scene {
   //   - boss centré dans le reste, y 0.22H→0.73H
   //   - rangée basse : y 0.73H→0.98H → logs (0→0.40W) | bouton (0.40W→0.73W) | tentatives (0.73W→W)
   _buildMobileUI(width, height, fp, stroke){
-    const nameSize = fp(0.034, 9, 13);
-    const timerSize = fp(0.024, 7, 10);
-    const hpTextSize = fp(0.030, 8, 12);
-    const attemptsSize = fp(0.026, 7, 11);
-    const logSize = fp(0.026, 7, 11);
-    const weaknessIconSize = fp(0.075, 18, 28);
+    const nameSize = fp(0.026, 7, 10);
+    const timerSize = fp(0.020, 6, 8);
+    const hpTextSize = fp(0.024, 7, 9);
+    const attemptsSize = fp(0.020, 6, 8);
+    const logSize = fp(0.020, 6, 8);
+    const weaknessIconSize = fp(0.065, 16, 24);
 
     const nameColW = width * 0.20;
     const nameColH = height * 0.49;
