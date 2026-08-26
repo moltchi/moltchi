@@ -2902,15 +2902,20 @@ async function renderPendingBossRewards(){
         body: JSON.stringify({ scope: _getPlayerScope() })
       });
       const data = await res.json();
-      if(!res.ok){ log(currentLang==='en' ? 'Could not claim rewards right now.' : 'Impossible de réclamer les récompenses pour le moment.', 'hit'); return; }
+      if(!res.ok){
+        pushBossFightLog(currentLang==='en' ? 'Could not claim rewards right now.' : 'Impossible de réclamer les récompenses pour le moment.');
+        renderBoss(boss);
+        return;
+      }
       creature = mergeDefaults(data.creature);
       card.style.display = 'none';
-      renderCreature(creature);
-      log(currentLang==='en'
+      pushBossFightLog(currentLang==='en'
         ? `Weekly rewards claimed: +${data.totalXP} XP, +${data.totalCoins} Moltcoins.${data.moltyxWon ? ' ✦ Eclat du Monde obtained!' : ''}`
-        : `Récompenses hebdomadaires réclamées : +${data.totalXP} XP, +${data.totalCoins} Moltcoins.${data.moltyxWon ? ' ✦ Eclat du Monde obtenu !' : ''}`, 'good');
+        : `Récompenses hebdomadaires réclamées : +${data.totalXP} XP, +${data.totalCoins} Moltcoins.${data.moltyxWon ? ' ✦ Eclat du Monde obtenu !' : ''}`);
+      renderCreature(creature); // appelle déjà renderBoss(boss) en fin de fonction, voir la note dans renderBoss()
     } catch(e){
-      log(currentLang==='en' ? 'Could not connect to the server — try again.' : 'Connexion au serveur impossible — réessaie.', 'hit');
+      pushBossFightLog(currentLang==='en' ? 'Could not connect to the server — try again.' : 'Connexion au serveur impossible — réessaie.');
+      renderBoss(boss);
     } finally {
       btn.disabled = false;
     }
@@ -3812,9 +3817,9 @@ async function startApp(){
     try{
       const data = await performAction('dungeon_unlock_corrupt', {});
       creature = mergeDefaults(data.creature);
-      log(`Le Sanctuaire Corrompu s'ouvre à ${creature.name}...`, 'good');
+      dungeonLog(`Le Sanctuaire Corrompu s'ouvre à ${creature.name}...`, 'good', 'corrupt-log');
       renderCreature(creature);
-    } catch(e){ log(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit'); console.error(e); }
+    } catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit', 'corrupt-log'); console.error(e); }
   };
 
   $('btn-climb-corrupt').onclick = async () => {
@@ -3863,9 +3868,9 @@ async function startApp(){
     try{
       const data = await performAction('dungeon_unlock_noyau', {});
       creature = mergeDefaults(data.creature);
-      log(currentLang==='en' ? `The Primordial Core opens to ${creature.name}...` : `Le Noyau Primordial s'ouvre à ${creature.name}...`, 'good');
+      dungeonLog(currentLang==='en' ? `The Primordial Core opens to ${creature.name}...` : `Le Noyau Primordial s'ouvre à ${creature.name}...`, 'good', 'noyau-log');
       renderCreature(creature);
-    } catch(e){ log(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit'); console.error(e); }
+    } catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit', 'noyau-log'); console.error(e); }
   };
 
   $('btn-climb-noyau').onclick = async () => {

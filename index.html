@@ -539,10 +539,11 @@
       <p data-i18n="p_boss_reset_weekly" style="font-size:12px;color:var(--ivory-dim);margin-top:-6px;">Se réinitialise chaque semaine. Récompenses selon rang au moment du reset.</p>
       <ul class="leaderboard" id="leaderboard"><li>Chargement…</li></ul>
     </div>
-    <div class="card">
-      <!-- Notifications générales (éclosion, paiement, déblocage donjon, Pass Saisonnier...),
-           INDÉPENDANT du log de combat du Boss (celui-ci vit désormais dans le panneau
-           Phaser au-dessus, alimenté séparément — voir bossFightLog dans app.js). -->
+    <div class="card" style="display:none">
+      <!-- Masquée volontairement pour l'instant (voir la conversation) : ce log parle de
+           tout sauf du Boss (éclosion, paiement, déblocage donjon, Pass Saisonnier...) et
+           n'avait pas vraiment sa place ici. log() reste inchangé côté app.js — juste plus
+           affiché nulle part le temps de décider d'un meilleur emplacement. -->
       <div class="log" id="log"></div>
     </div>
   </div>
