@@ -144,6 +144,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Moltchi">
 <link rel="stylesheet" href="style.css">
+<!-- Police pixel utilisée par le HUD de combat du Boss Mondial (voir FONT_FAMILY dans
+     game/scenes/BossScene.js) — chargée ici, PAS attendue de manière bloquante pour le
+     reste du site : app.js attend explicitement qu'elle soit prête juste avant de
+     démarrer Phaser (voir preloadPhaserBlocking), pour que le tout premier rendu du HUD
+     utilise déjà la bonne police plutôt que le repli 'monospace' du navigateur. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.min.js"></script>
 <!--
   MONETAG — Publicité pour les Coffres, format "Direct Link (Direct ads)".
@@ -511,26 +519,26 @@
       <button id="btn-claim-boss-rewards" class="primary big" style="margin-top:10px;" data-i18n="btn_claim_boss_rewards">Tout réclamer</button>
     </div>
     <div class="card">
-      <div id="boss-portrait-wrap" style="width:150px;height:150px;margin:0 auto 12px;position:relative;display:flex;align-items:center;justify-content:center;">
-        <!-- Portrait exclusivement Phaser (idle animé) : si le PNG ou Phaser échouent à
-             charger, rien ne s'affiche ici — voir BossScene.showIdle() dans
-             game/scenes/BossScene.js, aucune image de secours volontairement. -->
+      <!-- Écran de combat COMPLET rendu par Phaser (fond, nom, affinités, barre de vie,
+           minuteur, tentatives, log, bouton Attaquer interactif) — voir
+           game/scenes/BossScene.js showBattleUI(). Plus aucune UI HTML séparée ici : tout
+           vient du canvas partagé. Aucun repli visuel volontairement si Phaser/les assets
+           échouent à charger (même philosophie que le reste du Boss Mondial) — la carte
+           reste alors simplement vide, voir la conversation sur ce choix. -->
+      <div id="boss-portrait-wrap" style="width:100%;aspect-ratio:16/9;position:relative;">
         <div id="boss-fx-stage" class="fx-stage boss-fx-stage"></div>
       </div>
-      <h2 id="boss-name">Chargement du Boss…</h2>
-      <p id="boss-affinities" style="font-size:12px;color:var(--ivory-dim);margin:-6px 0 8px;"></p>
-      <div class="boss-header"><span class="boss-hp-text" id="boss-hp-text">-- / --</span><span class="boss-hp-text" id="boss-timer"></span></div>
-      <div class="boss-track"><div class="boss-fill" id="boss-fill" style="width:100%"></div><div class="boss-pct" id="boss-pct">100%</div></div>
-      <div class="attempts-row">
-        <div><div class="attempts-left" id="attempts-text">3 attaques restantes aujourd'hui</div><div class="pip-row" id="pip-row"></div></div>
-        <button id="btn-attack" class="primary" data-i18n="btn_attack">⚔️ Attaquer</button>
-      </div>
-      <div class="log" id="log"></div>
     </div>
     <div class="card">
       <h2 data-i18n="h2_contributors">Classement des contributeurs</h2>
       <p data-i18n="p_boss_reset_weekly" style="font-size:12px;color:var(--ivory-dim);margin-top:-6px;">Se réinitialise chaque semaine. Récompenses selon rang au moment du reset.</p>
       <ul class="leaderboard" id="leaderboard"><li>Chargement…</li></ul>
+    </div>
+    <div class="card">
+      <!-- Notifications générales (éclosion, paiement, déblocage donjon, Pass Saisonnier...),
+           INDÉPENDANT du log de combat du Boss (celui-ci vit désormais dans le panneau
+           Phaser au-dessus, alimenté séparément — voir bossFightLog dans app.js). -->
+      <div class="log" id="log"></div>
     </div>
   </div>
 

@@ -669,7 +669,16 @@ document.querySelectorAll('.tab').forEach(tab=>{
     // Idle Phaser du boss superposé au portrait statique : ne se déclenche qu'à l'ouverture
     // de l'onglet (pas à chaque rendu), pour ne pas voler le canvas partagé à une autre
     // zone (soin, mini-jeu...) tant que le joueur ne regarde pas vraiment le Boss.
-    if(tab.dataset.tab === 'boss' && boss) playFxEffectSafe(Bridge => Bridge.showBossIdle(boss.bossId));
+    if(tab.dataset.tab === 'boss' && boss){
+      renderBoss(boss); // (re)construit le HUD Phaser maintenant que le panel est actif — voir le garde-fou dans renderBoss()
+      playFxEffectSafe(Bridge => Bridge.showBossIdle(boss.bossId));
+    } else if(tab.dataset.tab === 'creature'){
+      // Sans ça, le canvas partagé peut rester coincé sur boss-fx-stage après un aller-
+      // retour sur l'onglet Boss (display:none sur le panel inactif ne suffisait pas dans
+      // tous les cas observés — voir la conversation). Reprise explicite, comme le fait
+      // déjà stopTrainingGame() en quittant un mini-jeu.
+      playFxEffectSafe(Bridge => Bridge.reclaimCreatureStage());
+    }
     const dropdown = tab.closest('.tab-dropdown');
     if(dropdown){
       const group = dropdown.closest('.tab-group');
@@ -680,6 +689,28 @@ document.querySelectorAll('.tab').forEach(tab=>{
     }
   };
 });
+
+// Redimensionnement dynamique du HUD de combat Boss, sans recharger la page : on observe
+// #boss-portrait-wrap et on relance renderBoss() (débouncé) dès que sa taille change réel-
+// lement — couvre le redimensionnement de fenêtre desktop ET la rotation d'écran mobile.
+// showBattleUI() détecte lui-même le changement de taille côté Phaser et reconstruit toute
+// la mise en page (bascule desktop/mobile comprise, voir game/scenes/BossScene.js) — ici on
+// ne fait que redéclencher un rendu avec les données à jour au bon moment.
+if(typeof ResizeObserver !== 'undefined'){
+  const bossPortraitWrap = $('boss-portrait-wrap');
+  if(bossPortraitWrap){
+    let bossResizeTimer = null;
+    new ResizeObserver(() => {
+      clearTimeout(bossResizeTimer);
+      // Léger débounce : un redimensionnement de fenêtre déclenche l'event en rafale tant
+      // qu'on fait glisser le bord — inutile de reconstruire toute l'UI Phaser à chaque
+      // pixel, seulement une fois que ça s'est stabilisé.
+      bossResizeTimer = setTimeout(() => {
+        if(boss && $('panel-boss') && $('panel-boss').classList.contains('active')) renderBoss(boss);
+      }, 150);
+    }).observe(bossPortraitWrap);
+  }
+}
 
 // Clic sur l'image du titre : retour à l'onglet "Ma créature" (réutilise la même logique
 // que les onglets, en simulant un clic sur celui de "creature" plutôt qu'en la dupliquant).
@@ -754,6 +785,7 @@ function updateTabAccess(c){
     document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
     document.querySelector('.tab[data-tab="creature"]').classList.add('active');
     $('panel-creature').classList.add('active');
+    playFxEffectSafe(Bridge => Bridge.reclaimCreatureStage());
   }
 }
 
@@ -1013,14 +1045,48 @@ function hidePhaserLoadingOverlay(){
 // tant qu'il ne sera pas prêt (plus de fallback DOM, voir playCareAnimation() plus haut)
 // — mais un réseau capricieux ou un CDN bloqué ne doit jamais coincer le joueur
 // indéfiniment sur l'écran de chargement.
-const PHASER_LOADING_TIMEOUT_MS = 8000;
+const PHASER_LOADING_TIMEOUT_MS = 15000; // était 8000 — relevé pour laisser le temps aux assets du Boss (spritesheets, potentiellement plusieurs Mo) préchargés ici désormais, voir preloadPhaserBlocking() ci-dessous.
 async function preloadPhaserBlocking(){
   try{
+    // Police pixel du HUD de combat Boss (voir FONT_FAMILY dans BossScene.js) : attendue
+    // AVANT que Phaser ne crée le moindre texte, sinon le tout premier rendu utilise le
+    // repli 'monospace' du navigateur et ne se corrige jamais tout seul par la suite (un
+    // Text Phaser déjà dessiné ne se redessine pas automatiquement quand la police finit de
+    // charger après coup). Best-effort : si ça échoue (hors-ligne, CDN bloqué...), on
+    // continue quand même avec le repli plutôt que de bloquer le jeu pour une police.
+    try{
+      if(document.fonts && document.fonts.load) await document.fonts.load('10px "Press Start 2P"');
+    } catch(e){ /* police non critique */ }
+
     if(!_phaserBridgeModule) _phaserBridgeModule = await import('./game/bridge.js');
     const { Bridge } = _phaserBridgeModule;
     _phaserPreloadStarted = true;
     await Promise.race([
-      Bridge.ensureLoaded(setPhaserLoadingProgress),
+      (async () => {
+        await Bridge.ensureLoaded(setPhaserLoadingProgress);
+        // Une fois le moteur prêt : précharge aussi les assets du Boss de la semaine
+        // (idle/attacked/slash + fond/cadre HP/log/bouton/gemmes) directement dans cet
+        // écran de chargement, plutôt qu'en tâche de fond après coup — pour que l'onglet
+        // Boss soit instantané dès le premier clic, plutôt que de découvrir le
+        // téléchargement à ce moment précis (voir la conversation sur le délai perçu).
+        // Best-effort : un échec ici (requête boss ou assets) ne bloque jamais le reste du
+        // jeu, le joueur attendra juste un peu plus longtemps au premier clic sur Boss.
+        try{
+          setPhaserLoadingProgress(85, 'boss-preview');
+          const bossPreview = await loadBoss();
+          if(bossPreview && bossPreview.bossId){
+            setPhaserLoadingProgress(90, 'boss-assets');
+            await Promise.all([
+              Bridge.preloadBossIdle(bossPreview.bossId),
+              Bridge.preloadBossAttacked(bossPreview.bossId),
+              Bridge.preloadBossSlash(),
+              Bridge.preloadBossBattleUIAssets(),
+              Bridge.preloadBossArenaBg(bossPreview.bossId),
+            ]);
+          }
+        } catch(e){ /* préchargement Boss best-effort, jamais bloquant */ }
+        setPhaserLoadingProgress(100, 'ready');
+      })(),
       new Promise(resolve => setTimeout(() => { setPhaserLoadingProgress(100, 'timeout'); resolve(false); }, PHASER_LOADING_TIMEOUT_MS)),
     ]);
   } catch(e){
@@ -2102,15 +2168,9 @@ function renderCreature(c){
   $('btn-play').disabled = careLeft === 0;
   $('btn-sleep').disabled = careLeft === 0;
 
-  const attemptsMax = maxBossAttacks(c);
-  const attemptsLeft = c.lastAttackDay === todayKey() ? Math.max(0, attemptsMax - c.attacksToday) : attemptsMax;
-  $('attempts-text').textContent = attemptsLeft > 0
-    ? (currentLang==='en' ? `${attemptsLeft} attack${attemptsLeft>1?'s':''} left today` : `${attemptsLeft} attaque${attemptsLeft>1?'s':''} restante${attemptsLeft>1?'s':''} aujourd'hui`)
-    : (currentLang==='en' ? 'Come back tomorrow to attack again' : `Reviens demain pour attaquer à nouveau`);
-  $('btn-attack').disabled = attemptsLeft === 0;
-  const pipRow = $('pip-row'); pipRow.innerHTML = '';
-  const used = c.lastAttackDay === todayKey() ? c.attacksToday : 0;
-  for(let i=0;i<attemptsMax;i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < used ? 'used' : 'available'); pipRow.appendChild(pip); }
+  // Tentatives d'attaque Boss : déplacé dans renderBoss() (dépend de `boss` en plus de `c`,
+  // et alimente désormais le HUD Phaser plutôt que #attempts-text/#pip-row/#btn-attack,
+  // retirés d'index.html).
 
   const MAX_EQUIP = 5;
 
@@ -2239,6 +2299,7 @@ function renderCreature(c){
   renderTreasurePanel(c);
   renderChestsPanel(c);
   renderShopPanel(c);
+  renderBoss(boss); // tentatives d'attaque dépendent de `c`, pas seulement de `boss` — voir la note dans renderBoss()
 }
 
 
@@ -2569,20 +2630,120 @@ async function claimChestReward(){
 // ============================================================
 // ============ RENDU BOSS MONDIAL & CLASSEMENT ============
 // ============================================================
+// Log de combat du Boss, INDÉPENDANT de log()/#log (qui garde toutes les autres
+// notifications — éclosion, paiement, déblocage donjon...). Alimenté uniquement par
+// handleBossAttackClick() ci-dessous, consommé par renderBoss() -> Bridge.showBossBattleUI.
+let bossFightLog = [];
+let bossAttackInFlight = false;
+function pushBossFightLog(msg){
+  bossFightLog.unshift(msg);
+  if(bossFightLog.length > 20) bossFightLog.length = 20; // le HUD n'affiche que les 3 dernières, marge large pour usage futur
+}
+
 function renderBoss(boss){
+  if(!boss) return; // peut être appelé (via renderCreature) avant que loadBoss() ait résolu
   const def = bossDef(boss);
   const elLabel = currentLang === 'en' ? ELEMENT_LABEL_EN : ELEMENT_LABEL;
-  $('boss-name').textContent = def.name + (boss.kills > 0 ? (currentLang==='en' ? ` (defeated ${boss.kills}x)` : ` (vaincu ${boss.kills}x)`) : '');
-  $('boss-affinities').textContent = currentLang==='en'
+  const name = def.name + (boss.kills > 0 ? (currentLang==='en' ? ` (defeated ${boss.kills}x)` : ` (vaincu ${boss.kills}x)`) : '');
+  const affinities = currentLang==='en'
     ? `Weak against ${elLabel[def.weakness]} (+20% damage taken) · Resists ${elLabel[def.resistance]} (-10% damage taken)`
     : `Faible contre ${elLabel[def.weakness]} (+20% dégâts subis) · Résiste à ${elLabel[def.resistance]} (-10% dégâts subis)`;
-  const pct = Math.max(0, Math.round((boss.hp / boss.maxHp) * 100));
-  $('boss-fill').style.width = pct + '%';
-  $('boss-pct').textContent = pct + '%';
-  $('boss-hp-text').textContent = `${Math.max(0,Math.round(boss.hp)).toLocaleString()} / ${boss.maxHp.toLocaleString()} PV`;
   const nextMonday = boss.cycleStart + 7*24*60*60*1000;
   const daysLeft = Math.max(0, Math.ceil((nextMonday - Date.now())/(1000*60*60*24)));
-  $('boss-timer').textContent = daysLeft > 0 ? `${daysLeft}j restants` : 'cycle terminé';
+  const timerText = daysLeft > 0
+    ? (currentLang==='en' ? `${daysLeft}d left` : `${daysLeft}j restants`)
+    : (currentLang==='en' ? 'cycle ended' : 'cycle terminé');
+
+  // Tentatives d'attaque — dépend de `creature`, pas de `boss` (déplacé depuis
+  // renderCreature(), voir la note laissée là-bas).
+  const c = creature;
+  const attemptsMax = c ? maxBossAttacks(c) : 0;
+  const attemptsUsed = c && c.lastAttackDay === todayKey() ? c.attacksToday : 0;
+  const attemptsLeft = Math.max(0, attemptsMax - attemptsUsed);
+  const attemptsText = attemptsLeft > 0
+    ? (currentLang==='en' ? `${attemptsLeft} attack${attemptsLeft>1?'s':''} left today` : `${attemptsLeft} attaque${attemptsLeft>1?'s':''} restante${attemptsLeft>1?'s':''} aujourd'hui`)
+    : (currentLang==='en' ? 'Come back tomorrow to attack again' : `Reviens demain pour attaquer à nouveau`);
+  const attackLabel = currentLang==='en' ? '⚔️ Attack' : '⚔️ Attaquer';
+
+  // Ne pousse vers Phaser QUE si l'onglet Boss est réellement affiché — renderBoss() est
+  // maintenant appelée à chaque renderCreature() (feed/play/training/...), pas seulement à
+  // l'ouverture de l'onglet ; sans ce garde-fou, ça volerait sans arrêt le canvas partagé à
+  // #creature-stage/#training-stage, cassant les animations en cours ailleurs.
+  const bossPanelActive = $('panel-boss') && $('panel-boss').classList.contains('active');
+  if(!bossPanelActive) return;
+
+  playFxEffectSafe(Bridge => Bridge.showBossBattleUI({
+    bossId: boss.bossId, name, affinities, weaknessElement: def.weakness, hp: boss.hp, maxHp: boss.maxHp, timerText,
+    attemptsText, attemptsUsed, attemptsMax,
+    attackDisabled: attemptsLeft === 0 || bossAttackInFlight,
+    attackLabel, log: bossFightLog,
+    onAttack: handleBossAttackClick,
+  }));
+}
+
+/**
+ * Callback du bouton Attaquer du HUD Phaser (voir onAttack passé à
+ * Bridge.showBossBattleUI ci-dessus). Même logique réseau que l'ancien handler DOM
+ * ($('btn-attack').onclick) — seule différence : les messages de combat vont dans
+ * bossFightLog (HUD Phaser) au lieu de log()/#log, et la mise à jour du bouton
+ * (désactivé pendant la requête) passe par un re-rendu de renderBoss() plutôt que
+ * $('btn-attack').disabled.
+ */
+async function handleBossAttackClick(){
+  if(bossAttackInFlight) return;
+  const maxAtk = maxBossAttacks(creature);
+  const attacksLeftLocal = creature.lastAttackDay === todayKey() ? maxAtk - creature.attacksToday : maxAtk;
+  if(attacksLeftLocal <= 0) return;
+  bossAttackInFlight = true;
+  renderBoss(boss); // désactive visuellement le bouton pendant la requête
+  try{
+    const res = await fetch('https://oouqtclsffybeloulvph.supabase.co/functions/v1/attack-boss', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ scope: _getPlayerScope() })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      const msg = data.error === 'quota d\'attaques atteint'
+        ? (currentLang==='en' ? 'No more attacks available today.' : 'Plus d\'attaque disponible aujourd\'hui.')
+        : (currentLang==='en' ? 'Attack unavailable right now.' : 'Attaque impossible pour le moment.');
+      pushBossFightLog(msg);
+      return;
+    }
+    creature = mergeDefaults(data.creature);
+    const boss2 = data.boss;
+    boss = boss2;
+    const lb2 = data.leaderboard;
+    if(data.achievements){
+      achievements = data.achievements;
+      if(data.newlyUnlocked && data.newlyUnlocked.length) showAchievementToasts(data.newlyUnlocked);
+    }
+    if(data.bossDefeatedNow) pushBossFightLog(currentLang==='en'
+      ? `${bossDef(boss2).name} is defeated! It respawns immediately.`
+      : `${bossDef(boss2).name} est vaincu ! Il renaît aussitôt.`);
+    playFxEffectSafe(Bridge => Bridge.playBossEffect({}));
+    // Le boss vient-il de tourner (reset hebdomadaire déclenché par CETTE attaque, voir
+    // resetHappened dans attack-boss.ts) ? Si oui, le nouveau boss n'a pas réellement été
+    // touché — on réaffiche juste son idle. Sinon (même boss, qu'il ait été achevé et
+    // respawné à pleine vie ou non — voir bossDefeatedNow), on joue bien l'animation
+    // "coup subi", qui revient automatiquement à l'idle une fois terminée.
+    if(data.resetHappened) playFxEffectSafe(Bridge => Bridge.showBossIdle(boss2.bossId));
+    else playFxEffectSafe(Bridge => Bridge.showBossAttacked(boss2.bossId));
+    pushBossFightLog(currentLang==='en'
+      ? `${creature.name} deals ${data.dmg} damage to the Boss.`
+      : `${creature.name} inflige ${data.dmg} dégâts au Boss.`);
+    renderCreature(creature); renderBoss(boss2); renderLeaderboard(lb2, myId);
+    await renderPendingBossRewards();
+  } catch(e){
+    pushBossFightLog(currentLang==='en' ? 'Could not connect to the server — try again.' : 'Connexion au serveur impossible — réessaie.');
+  } finally {
+    bossAttackInFlight = false;
+    renderBoss(boss);
+  }
 }
 function renderLeaderboard(lb, myId){
   const entries = Object.entries(lb).sort((a,b)=>b[1]-a[1]).slice(0,10);
@@ -3478,6 +3639,12 @@ async function startApp(){
   // Slash partagé (media/attackboss_slash.png, voir playAttack() dans BossScene.js) : pas
   // besoin de bossId, un seul fichier commun à tous les boss.
   playFxEffectSafe(Bridge => Bridge.preloadBossSlash());
+  // Assets fixes du HUD de combat (cadre HP, log, bouton, gemmes) — indépendants du boss,
+  // une seule fois pour toute la session.
+  playFxEffectSafe(Bridge => Bridge.preloadBossBattleUIAssets());
+  // Fond d'arène : CELUI-LÀ dépend du boss (voir BOSS_ARENA_BG dans BossScene.js), donc
+  // préchargé par bossId comme idle/attacked, pas dans le lot fixe ci-dessus.
+  playFxEffectSafe(Bridge => Bridge.preloadBossArenaBg(boss.bossId));
   const lb = await loadLeaderboard();
   renderLeaderboard(lb, myId);
   await renderPendingBossRewards();
@@ -3593,59 +3760,6 @@ async function startApp(){
       renderCreature(creature);
       playCareAnimation(creature, 'sleepVideo');
     } catch(e){ console.error(e); }
-  };
-
-  $('btn-attack').onclick = async () => {
-    const maxAtk = maxBossAttacks(creature);
-    const attacksLeftLocal = creature.lastAttackDay === todayKey() ? maxAtk - creature.attacksToday : maxAtk;
-    if(attacksLeftLocal <= 0) return;
-    $('btn-attack').disabled = true;
-    try{
-      const res = await fetch('https://oouqtclsffybeloulvph.supabase.co/functions/v1/attack-boss', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-        },
-        body: JSON.stringify({ scope: _getPlayerScope() })
-      });
-      const data = await res.json();
-      if(!res.ok){
-        const msg = data.error === 'quota d\'attaques atteint'
-          ? (currentLang==='en' ? 'No more attacks available today.' : 'Plus d\'attaque disponible aujourd\'hui.')
-          : (currentLang==='en' ? 'Attack unavailable right now.' : 'Attaque impossible pour le moment.');
-        log(msg, 'hit'); return;
-      }
-      creature = mergeDefaults(data.creature);
-      const boss2 = data.boss;
-      boss = boss2;
-      const lb2 = data.leaderboard;
-      if(data.achievements){
-        achievements = data.achievements;
-        if(data.newlyUnlocked && data.newlyUnlocked.length) showAchievementToasts(data.newlyUnlocked);
-      }
-      if(data.bossDefeatedNow) log(currentLang==='en'
-        ? `${bossDef(boss2).name} is defeated! It respawns immediately — the weekly ranking continues.`
-        : `${bossDef(boss2).name} est vaincu ! Il renaît aussitôt — le classement de la semaine continue.`, 'good');
-      playFxEffectSafe(Bridge => Bridge.playBossEffect({}));
-      // Le boss vient-il de tourner (reset hebdomadaire déclenché par CETTE attaque, voir
-      // resetHappened dans attack-boss.ts) ? Si oui, le nouveau boss n'a pas réellement été
-      // touché — on réaffiche juste son idle. Sinon (même boss, qu'il ait été achevé et
-      // respawné à pleine vie ou non — voir bossDefeatedNow), on joue bien l'animation
-      // "coup subi", qui revient automatiquement à l'idle une fois terminée.
-      if(data.resetHappened) playFxEffectSafe(Bridge => Bridge.showBossIdle(boss2.bossId));
-      else playFxEffectSafe(Bridge => Bridge.showBossAttacked(boss2.bossId));
-      renderCreature(creature); renderBoss(boss2); renderLeaderboard(lb2, myId);
-      await renderPendingBossRewards();
-      log(currentLang==='en'
-        ? `${creature.name} deals ${data.dmg} damage to the Boss.`
-        : `${creature.name} inflige ${data.dmg} dégâts au Boss.`, 'hit');
-    } catch(e){
-      log(currentLang==='en' ? 'Could not connect to the server — try again.' : 'Connexion au serveur impossible — réessaie.', 'hit');
-    } finally {
-      $('btn-attack').disabled = false;
-    }
   };
 
   $('btn-start-reflex').onclick = () => startReflex(creature);
