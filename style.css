@@ -86,6 +86,25 @@
     box-shadow:0 0 10px 1px rgba(226,166,63,0.55), inset 0 1px 0 rgba(255,255,255,0.35);font-weight:600;}
   .tab.locked{opacity:0.35;cursor:not-allowed;}
   .tab.locked:hover{color:var(--ivory-dim);border-color:var(--moss-700);}
+  /* Jumelle visuelle de .tab, MAIS sans la classe .tab elle-même — évite que
+     document.querySelectorAll('.tab') (handler des onglets principaux) ne capte aussi ces
+     boutons de sélection de donjon (Tour/Sanctuaire/Noyau), voir la conversation.
+     border-image en 9-slice (pas background-image) : les bouts arrondis de la pilule
+     restent nets quelle que soit la largeur du bouton (le texte "Sanctuaire Corrompu" est
+     bien plus large que "Tour du Wyrm") — seule la bande droite du milieu s'étire. */
+  .dungeon-section-btn{font-family:var(--font-mono);font-size:9px;letter-spacing:0.04em;text-transform:uppercase;
+    padding:8px 16px;color:var(--ivory-dim);cursor:pointer;
+    background:var(--moss-900);border-radius:20px;
+    border-style:solid;border-color:transparent;
+    border-image-source:url('media/dungeon_tab_inactive.png');
+    border-image-slice:35 145;
+    border-image-width:9px 26px;
+    border-image-repeat:stretch;
+    transition:color 0.15s, filter 0.15s, transform 0.1s;}
+  .dungeon-section-btn:hover{color:var(--ivory);filter:brightness(1.15);}
+  .dungeon-section-btn:active{transform:translateY(1px);}
+  .dungeon-section-btn.active{color:#3a2408;font-weight:600;background:#a5670f;
+    border-image-source:url('media/dungeon_tab_active.png');}
   .notif-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e0453f;
     margin-left:6px;box-shadow:0 0 5px 1px rgba(224,69,63,0.7);vertical-align:middle;}
   .tab-highlight{font-weight:700;color:var(--gold-bright);border-color:var(--gold);
@@ -721,6 +740,10 @@
      conservée pour hériter overflow/pointer-events ; ces propriétés-ci priment par ordre
      d'apparition dans la feuille de style (même spécificité). */
   .boss-fx-stage{position:absolute;inset:0;height:100%;margin:0;border-radius:12px;}
+  /* Même principe pour le HUD complet de la Tour du Wyrm (voir #dungeon-fx-wrap dans
+     index.html et DungeonScene.showTowerHUD()) — remplit son conteneur en pleine largeur/
+     hauteur plutôt que la bande fine de 64px héritée de .fx-stage. */
+  .dungeon-fx-stage{position:absolute;inset:0;height:100%;margin:0;border-radius:12px;}
 
   /* ===================================================================
      RESPONSIVE — à conserver et étendre pour toute future modification.

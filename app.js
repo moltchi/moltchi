@@ -672,11 +672,18 @@ document.querySelectorAll('.tab').forEach(tab=>{
     if(tab.dataset.tab === 'boss' && boss){
       renderBoss(boss); // (re)construit le HUD Phaser maintenant que le panel est actif — voir le garde-fou dans renderBoss()
       playFxEffectSafe(Bridge => Bridge.showBossIdle(boss.bossId));
+    } else if(tab.dataset.tab === 'dungeon' && creature){
+      // Les 3 (re)construisent leurs données HTML cachées sans souci ; seule celle qui
+      // correspond à activeDungeonSection pousse réellement vers Phaser (garde-fou interne
+      // à chaque fonction) — évite de devoir deviner ici laquelle est "la bonne".
+      renderDungeonPanel(creature);
+      renderCorruptPanel(creature);
+      renderNoyauPanel(creature);
     } else if(tab.dataset.tab === 'creature'){
-      // Sans ça, le canvas partagé peut rester coincé sur boss-fx-stage après un aller-
-      // retour sur l'onglet Boss (display:none sur le panel inactif ne suffisait pas dans
-      // tous les cas observés — voir la conversation). Reprise explicite, comme le fait
-      // déjà stopTrainingGame() en quittant un mini-jeu.
+      // Sans ça, le canvas partagé peut rester coincé sur boss-fx-stage/dungeon-fx-stage
+      // après un aller-retour sur un autre onglet (display:none sur le panel inactif ne
+      // suffisait pas dans tous les cas observés — voir la conversation). Reprise
+      // explicite, comme le fait déjà stopTrainingGame() en quittant un mini-jeu.
       playFxEffectSafe(Bridge => Bridge.reclaimCreatureStage());
     }
     const dropdown = tab.closest('.tab-dropdown');
@@ -710,7 +717,54 @@ if(typeof ResizeObserver !== 'undefined'){
       }, 150);
     }).observe(bossPortraitWrap);
   }
+
+  // Même principe pour le HUD des donjons (voir DungeonScene.showDungeonHUD()) — un seul
+  // observer pour les 3 conteneurs, mais ne redéclenche un rendu que pour la section
+  // ACTUELLEMENT active (activeDungeonSection, suivi par l'IntersectionObserver plus bas) :
+  // resize une section masquée/inactive ne sert à rien tant qu'elle n'a pas le canvas.
+  const dungeonRenderers = {
+    dungeon: () => renderDungeonPanel(creature),
+    corrupt: () => renderCorruptPanel(creature),
+    noyau: () => renderNoyauPanel(creature),
+  };
+  const dungeonResizeTargets = [
+    { key: 'dungeon', el: $('dungeon-fx-wrap') },
+    { key: 'corrupt', el: $('corrupt-fx-wrap') },
+    { key: 'noyau', el: $('noyau-fx-wrap') },
+  ].filter(t => t.el);
+  if(dungeonResizeTargets.length){
+    let dungeonResizeTimer = null;
+    const dungeonRO = new ResizeObserver(() => {
+      clearTimeout(dungeonResizeTimer);
+      dungeonResizeTimer = setTimeout(() => {
+        if(!creature || !$('panel-dungeon') || !$('panel-dungeon').classList.contains('active')) return;
+        const renderFn = dungeonRenderers[activeDungeonSection];
+        if(renderFn) renderFn();
+      }, 150);
+    });
+    dungeonResizeTargets.forEach(t => dungeonRO.observe(t.el));
+  }
 }
+
+// Sélecteur de donjon (boutons Tour/Sanctuaire/Noyau, voir index.html) : un seul affiché à
+// la fois — contrainte du canvas Phaser partagé, voir la note en tête de DungeonScene.js.
+// Le clic bascule activeDungeonSection, affiche la bonne section, cache les autres, et
+// pousse immédiatement le HUD Phaser vers ce donjon.
+document.querySelectorAll('.dungeon-section-btn').forEach(btn => {
+  btn.onclick = () => {
+    const key = btn.dataset.dungeonSection;
+    if(!key || key === activeDungeonSection) return;
+    activeDungeonSection = key;
+    document.querySelectorAll('.dungeon-section-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.dungeon-section').forEach(section => {
+      section.style.display = section.id === `dungeon-section-${key}` ? 'block' : 'none';
+    });
+    if(!creature) return;
+    if(key === 'dungeon') renderDungeonPanel(creature);
+    else if(key === 'corrupt') renderCorruptPanel(creature);
+    else if(key === 'noyau') renderNoyauPanel(creature);
+  };
+});
 
 // Clic sur l'image du titre : retour à l'onglet "Ma créature" (réutilise la même logique
 // que les onglets, en simulant un clic sur celui de "creature" plutôt qu'en la dupliquant).
@@ -3207,45 +3261,144 @@ async function startArcane(c){
 
 
 // ============================================================
-// ============ RENDU DONJON (normal + corrompu) ============
+// ============ RENDU DONJON (Tour / Sanctuaire / Noyau) ============
 // ============================================================
+// Les 3 vivent dans LE MÊME panneau HTML (#panel-dungeon), empilés en scroll. Comme il n'y
+// a qu'un seul canvas Phaser partagé pour toute l'app, un seul des 3 peut avoir le rendu
+// riche à la fois — activeDungeonSection indique lequel, mis à jour par
+// l'IntersectionObserver plus bas (suit le scroll du joueur).
+let activeDungeonSection = 'dungeon';
+
+// Logs de combat, INDÉPENDANTS de log()/#log — un par donjon, alimentés uniquement par
+// leur handler de clic respectif, consommés par Bridge.showDungeonHUD(key, {...}).
+let dungeonFightLog = [];
+function pushDungeonFightLog(msg){
+  dungeonFightLog.unshift(msg);
+  if(dungeonFightLog.length > 20) dungeonFightLog.length = 20; // le HUD n'affiche que les 3 dernières (1 en mobile), marge large pour usage futur
+}
+let corruptFightLog = [];
+function pushCorruptFightLog(msg){
+  corruptFightLog.unshift(msg);
+  if(corruptFightLog.length > 20) corruptFightLog.length = 20;
+}
+let noyauFightLog = [];
+function pushNoyauFightLog(msg){
+  noyauFightLog.unshift(msg);
+  if(noyauFightLog.length > 20) noyauFightLog.length = 20;
+}
+
 function renderDungeonPanel(c){
-  $('floor-num').textContent = c.dungeonFloor;
-  $('your-power').textContent = totalPower(c);
-  $('floor-power').textContent = floorRequirement(c.dungeonFloor);
   const attemptsLeft = c.dungeonDay === todayKey() ? Math.max(0, maxDungeonAttempts(c) - c.dungeonAttempts) : maxDungeonAttempts(c);
   const clearsLeft = c.dungeonDay === todayKey() ? Math.max(0, maxDungeonClears(c) - c.dungeonClears) : maxDungeonClears(c);
-  if(currentLang === 'en'){
-    $('dungeon-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} failure${attemptsLeft>1?'s':''} allowed today` : "No more failures allowed today";
-    $('dungeon-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} floor${clearsLeft>1?'s':''} climbable today` : "Daily floor cap reached";
-  } else {
-    $('dungeon-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui";
-    $('dungeon-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint";
-  }
-  $('btn-climb').disabled = c.stage === 0 || attemptsLeft === 0 || clearsLeft === 0;
-  const pipRow = $('dungeon-pip-row'); pipRow.innerHTML = '';
-  const used = c.dungeonDay === todayKey() ? c.dungeonAttempts : 0;
-  for(let i=0;i<maxDungeonAttempts(c);i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < used ? 'used' : 'available'); pipRow.appendChild(pip); }
+  const attemptsUsed = c.dungeonDay === todayKey() ? c.dungeonAttempts : 0;
+  const attemptsMax = maxDungeonAttempts(c);
+
+  const attemptsText = currentLang==='en'
+    ? (attemptsLeft > 0 ? `${attemptsLeft} failure${attemptsLeft>1?'s':''} allowed today` : 'No more failures allowed today')
+    : (attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui");
+  const clearsText = currentLang==='en'
+    ? (clearsLeft > 0 ? `${clearsLeft} floor${clearsLeft>1?'s':''} climbable today` : 'Daily floor cap reached')
+    : (clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint");
+  const climbDisabled = c.stage === 0 || attemptsLeft === 0 || clearsLeft === 0 || towerClimbInFlight;
+  const climbLabel = currentLang==='en' ? '⚔️ Climb' : "⚔️ Tenter l'étage";
+  const floorLabel = currentLang==='en' ? 'FLOOR' : 'ÉTAGE';
+  const powerLabel = currentLang==='en' ? 'YOUR POWER' : 'TA PUISSANCE';
+  const reqLabel = currentLang==='en' ? 'FLOOR CHALLENGE' : "DÉFI DE L'ÉTAGE";
 
   const xpReward = dungeonXP(c.dungeonFloor);
   const xpFailReward = Math.max(1, Math.round(xpReward * 0.25));
-  const rewardEl = $('dungeon-reward-info');
+  let rewardText;
   if(currentLang === 'en'){
     if(isLootFloor(c.dungeonFloor)){
-      rewardEl.textContent = `This floor's reward: +${xpReward} XP + 1 item (loot floor). A win costs no failure. Loss: +${xpFailReward} XP anyway.`;
+      rewardText = `This floor's reward: +${xpReward} XP + 1 item (loot floor). A win costs no failure. Loss: +${xpFailReward} XP anyway.`;
     } else {
       const next = c.dungeonFloor - (c.dungeonFloor % 5) + 5;
-      rewardEl.textContent = `This floor's reward: +${xpReward} XP. Next item at floor ${next}. A win costs no failure. Loss: +${xpFailReward} XP anyway.`;
+      rewardText = `This floor's reward: +${xpReward} XP. Next item at floor ${next}. A win costs no failure. Loss: +${xpFailReward} XP anyway.`;
     }
   } else {
     if(isLootFloor(c.dungeonFloor)){
-      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP + 1 objet (palier de butin). Une victoire ne consomme aucun échec. Défaite : +${xpFailReward} XP quand même.`;
+      rewardText = `Récompense de cet étage : +${xpReward} XP + 1 objet (palier de butin). Une victoire ne consomme aucun échec. Défaite : +${xpFailReward} XP quand même.`;
     } else {
       const next = c.dungeonFloor - (c.dungeonFloor % 5) + 5;
-      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Une victoire ne consomme aucun échec. Défaite : +${xpFailReward} XP quand même.`;
+      rewardText = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Une victoire ne consomme aucun échec. Défaite : +${xpFailReward} XP quand même.`;
     }
   }
+  $('dungeon-reward-info').textContent = rewardText; // gardé à jour même masqué, au cas où réactivé un jour
+
+  // Même garde-fou que pour le Boss (onglet actif) + le nouveau garde-fou spécifique aux
+  // donjons (activeDungeonSection) : ne pousse vers Phaser QUE si c'est cette section-ci
+  // qui a actuellement le canvas, sinon les 3 fonctions de rendu se le disputeraient à
+  // chaque rafraîchissement (voir la conversation).
+  const dungeonPanelActive = $('panel-dungeon') && $('panel-dungeon').classList.contains('active');
+  if(dungeonPanelActive && activeDungeonSection === 'dungeon'){
+    playFxEffectSafe(Bridge => Bridge.showDungeonHUD('dungeon', {
+      dungeonName: currentLang==='en' ? I18N_EN.h2_wyrm_tower : 'Tour du Wyrm',
+      floorLabel, floorNum: c.dungeonFloor,
+      powerLabel, yourPower: totalPower(c),
+      reqLabel, floorPower: floorRequirement(c.dungeonFloor),
+      attemptsText, attemptsUsed, attemptsMax,
+      clearsText,
+      climbLabel, climbDisabled,
+      rewardText, log: dungeonFightLog,
+      onClimb: handleTowerClimbClick,
+    }));
+  }
   renderCodex(c);
+}
+
+let towerClimbInFlight = false;
+
+/**
+ * Callback du bouton "Tenter l'étage" du HUD Phaser de la Tour (voir onClimb passé à
+ * Bridge.showDungeonTowerHUD ci-dessus). Même logique réseau que l'ancien handler DOM
+ * ($('btn-climb').onclick) — juste redirigée + un garde-fou anti-double-clic pendant la
+ * requête (même principe que bossAttackInFlight pour le Boss).
+ */
+async function handleTowerClimbClick(){
+  if(towerClimbInFlight) return;
+  const attemptsLeft = creature.dungeonDay === todayKey() ? Math.max(0, maxDungeonAttempts(creature) - creature.dungeonAttempts) : maxDungeonAttempts(creature);
+  const clearsLeft = creature.dungeonDay === todayKey() ? Math.max(0, maxDungeonClears(creature) - creature.dungeonClears) : maxDungeonClears(creature);
+  if(attemptsLeft === 0) return;
+  if(clearsLeft === 0) return;
+  towerClimbInFlight = true;
+  renderDungeonPanel(creature); // désactive visuellement le bouton pendant la requête
+  try{
+    const data = await performAction('dungeon_climb', {});
+    creature = mergeDefaults(data.creature);
+    const moltyxFoundTxt = currentLang==='en'
+      ? (n) => ` ✦ Moltyx found: ${n}!`
+      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
+    if(data.win){
+      let msg = currentLang==='en'
+        ? `Floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
+        : `Étage ${data.clearedFloor} vaincu ! +${data.xpGain} XP.`;
+      if(data.item){
+        msg += currentLang==='en'
+          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
+          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
+      } else {
+        const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
+        msg += currentLang==='en'
+          ? ` No loot this time — next item at floor ${next}.`
+          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
+      }
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
+      pushDungeonFightLog(msg);
+    } else {
+      let msg = currentLang==='en'
+        ? `Defeat at floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
+        : `Défaite à l'étage ${data.failFloor}. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
+      pushDungeonFightLog(msg);
+    }
+    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('dungeon-fx-stage', { won: !!data.win }));
+    renderCreature(creature);
+  } catch(e){
+    pushDungeonFightLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'); console.error(e);
+  } finally {
+    towerClimbInFlight = false;
+    renderDungeonPanel(creature);
+  }
 }
 
 function renderCorruptPanel(c){
@@ -3283,40 +3436,108 @@ function renderCorruptPanel(c){
   lockedCard.style.display = 'none';
   playCard.style.display = 'block';
 
-  $('corrupt-floor-num').textContent = c.corruptFloor;
-  $('corrupt-your-power').textContent = totalPower(c);
-  $('corrupt-floor-power').textContent = corruptFloorRequirement(c.corruptFloor);
   const attemptsLeft = c.corruptDay === todayKey() ? Math.max(0, maxCorruptAttempts(c) - c.corruptAttempts) : maxCorruptAttempts(c);
   const clearsLeft = c.corruptDay === todayKey() ? Math.max(0, maxCorruptClears(c) - c.corruptClears) : maxCorruptClears(c);
-  if(currentLang === 'en'){
-    $('corrupt-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} failure${attemptsLeft>1?'s':''} allowed today` : "No more failures allowed today";
-    $('corrupt-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} floor${clearsLeft>1?'s':''} climbable today` : "Daily floor cap reached";
-  } else {
-    $('corrupt-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui";
-    $('corrupt-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint";
-  }
-  $('btn-climb-corrupt').disabled = c.stage === 0 || attemptsLeft === 0 || clearsLeft === 0;
-  const pipRow = $('corrupt-pip-row'); pipRow.innerHTML = '';
-  const used = c.corruptDay === todayKey() ? c.corruptAttempts : 0;
-  for(let i=0;i<maxCorruptAttempts(c);i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < used ? 'used' : 'available'); pipRow.appendChild(pip); }
+  const attemptsUsed = c.corruptDay === todayKey() ? c.corruptAttempts : 0;
+  const attemptsMax = maxCorruptAttempts(c);
+
+  const attemptsText = currentLang==='en'
+    ? (attemptsLeft > 0 ? `${attemptsLeft} failure${attemptsLeft>1?'s':''} allowed today` : 'No more failures allowed today')
+    : (attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui");
+  const clearsText = currentLang==='en'
+    ? (clearsLeft > 0 ? `${clearsLeft} floor${clearsLeft>1?'s':''} climbable today` : 'Daily floor cap reached')
+    : (clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint");
+  const climbDisabled = c.stage === 0 || attemptsLeft === 0 || clearsLeft === 0 || corruptClimbInFlight;
+  const climbLabel = currentLang==='en' ? '⚔️ Climb' : "⚔️ Tenter l'étage";
+  const floorLabel = currentLang==='en' ? 'FLOOR' : 'ÉTAGE';
+  const powerLabel = currentLang==='en' ? 'YOUR POWER' : 'TA PUISSANCE';
+  const reqLabel = currentLang==='en' ? 'FLOOR CHALLENGE' : "DÉFI DE L'ÉTAGE";
 
   const xpReward = corruptXP(c.corruptFloor);
   const xpFailReward = Math.max(1, Math.round(xpReward * 0.25));
-  const rewardEl = $('corrupt-reward-info');
+  let rewardText;
   if(currentLang === 'en'){
     if(isCorruptLootFloor(c.corruptFloor)){
-      rewardEl.textContent = `This floor's reward: +${xpReward} XP + 1 Sanctuary-exclusive item. Loss: +${xpFailReward} XP anyway.`;
+      rewardText = `This floor's reward: +${xpReward} XP + 1 Sanctuary-exclusive item. Loss: +${xpFailReward} XP anyway.`;
     } else {
       const next = c.corruptFloor - (c.corruptFloor % 5) + 5;
-      rewardEl.textContent = `This floor's reward: +${xpReward} XP. Next item at floor ${next}. Loss: +${xpFailReward} XP anyway.`;
+      rewardText = `This floor's reward: +${xpReward} XP. Next item at floor ${next}. Loss: +${xpFailReward} XP anyway.`;
     }
   } else {
     if(isCorruptLootFloor(c.corruptFloor)){
-      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP + 1 objet exclusif au Sanctuaire. Défaite : +${xpFailReward} XP quand même.`;
+      rewardText = `Récompense de cet étage : +${xpReward} XP + 1 objet exclusif au Sanctuaire. Défaite : +${xpFailReward} XP quand même.`;
     } else {
       const next = c.corruptFloor - (c.corruptFloor % 5) + 5;
-      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Défaite : +${xpFailReward} XP quand même.`;
+      rewardText = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Défaite : +${xpFailReward} XP quand même.`;
     }
+  }
+  $('corrupt-reward-info').textContent = rewardText; // gardé à jour même masqué, au cas où réactivé un jour
+
+  const dungeonPanelActive = $('panel-dungeon') && $('panel-dungeon').classList.contains('active');
+  if(dungeonPanelActive && activeDungeonSection === 'corrupt'){
+    playFxEffectSafe(Bridge => Bridge.showDungeonHUD('corrupt', {
+      dungeonName: currentLang==='en' ? 'Corrupt Sanctuary' : 'Sanctuaire Corrompu',
+      floorLabel, floorNum: c.corruptFloor,
+      powerLabel, yourPower: totalPower(c),
+      reqLabel, floorPower: corruptFloorRequirement(c.corruptFloor),
+      attemptsText, attemptsUsed, attemptsMax,
+      clearsText,
+      climbLabel, climbDisabled,
+      rewardText, log: corruptFightLog,
+      onClimb: handleCorruptClimbClick,
+    }));
+  }
+}
+
+let corruptClimbInFlight = false;
+
+/** Callback du bouton "Tenter l'étage" du HUD Phaser du Sanctuaire — même structure que
+ * handleTowerClimbClick(), voir cette dernière pour le détail des commentaires. */
+async function handleCorruptClimbClick(){
+  if(corruptClimbInFlight) return;
+  if(!creature.corruptUnlocked) return;
+  const attemptsLeft = creature.corruptDay === todayKey() ? Math.max(0, maxCorruptAttempts(creature) - creature.corruptAttempts) : maxCorruptAttempts(creature);
+  const clearsLeft = creature.corruptDay === todayKey() ? Math.max(0, maxCorruptClears(creature) - creature.corruptClears) : maxCorruptClears(creature);
+  if(attemptsLeft === 0) return;
+  if(clearsLeft === 0) return;
+  corruptClimbInFlight = true;
+  renderCorruptPanel(creature);
+  try{
+    const data = await performAction('dungeon_climb_corrupt', {});
+    creature = mergeDefaults(data.creature);
+    const moltyxFoundTxt = currentLang==='en'
+      ? (n) => ` ✦ Moltyx found: ${n}!`
+      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
+    if(data.win){
+      let msg = currentLang==='en'
+        ? `Sanctuary floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
+        : `Étage ${data.clearedFloor} du Sanctuaire vaincu ! +${data.xpGain} XP.`;
+      if(data.item){
+        msg += currentLang==='en'
+          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
+          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
+      } else {
+        const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
+        msg += currentLang==='en'
+          ? ` No loot this time — next item at floor ${next}.`
+          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
+      }
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
+      pushCorruptFightLog(msg);
+    } else {
+      let msg = currentLang==='en'
+        ? `Defeat at Sanctuary floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
+        : `Défaite à l'étage ${data.failFloor} du Sanctuaire. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
+      pushCorruptFightLog(msg);
+    }
+    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('corrupt-fx-stage', { won: !!data.win }));
+    renderCreature(creature);
+  } catch(e){
+    pushCorruptFightLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'); console.error(e);
+  } finally {
+    corruptClimbInFlight = false;
+    renderCorruptPanel(creature);
   }
 }
 
@@ -3361,44 +3582,118 @@ function renderNoyauPanel(c){
   const elLabel = currentLang === 'en' ? ELEMENT_LABEL_EN : ELEMENT_LABEL;
   const statLabel = currentLang === 'en' ? STAT_LABEL_EN : STAT_LABEL;
 
-  $('noyau-floor-num').textContent = floor;
-  $('noyau-your-power').textContent = noyauPower(c, floor);
-  $('noyau-floor-power').textContent = noyauFloorRequirement(floor);
+  const affinityText = currentLang === 'en'
+    ? `This floor's affinity: ${elLabel[noyauFloorElement(floor)]} (${statLabel[favored]} ×1.3) — opposed: ${statLabel[opposed]} ×0.7`
+    : `Affinité de cet étage : ${elLabel[noyauFloorElement(floor)]} (${statLabel[favored]} ×1,3) — opposée : ${statLabel[opposed]} ×0,7`;
   $('noyau-affinity-text').innerHTML = currentLang === 'en'
     ? `This floor's affinity: <strong>${elLabel[noyauFloorElement(floor)]}</strong> (${statLabel[favored]} ×1.3) — opposed: ${statLabel[opposed]} ×0.7`
-    : `Affinité de cet étage : <strong>${elLabel[noyauFloorElement(floor)]}</strong> (${statLabel[favored]} ×1,3) — opposée : ${statLabel[opposed]} ×0,7`;
+    : `Affinité de cet étage : <strong>${elLabel[noyauFloorElement(floor)]}</strong> (${statLabel[favored]} ×1,3) — opposée : ${statLabel[opposed]} ×0,7`; // gardé à jour même masqué
 
   const attemptsLeft = c.noyauDay === todayKey() ? Math.max(0, maxNoyauAttempts(c) - c.noyauAttempts) : maxNoyauAttempts(c);
   const clearsLeft = c.noyauDay === todayKey() ? Math.max(0, maxNoyauClears(c) - c.noyauClears) : maxNoyauClears(c);
-  if(currentLang === 'en'){
-    $('noyau-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} failure${attemptsLeft>1?'s':''} allowed today` : "No more failures allowed today";
-    $('noyau-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} floor${clearsLeft>1?'s':''} climbable today` : "Daily floor cap reached";
-  } else {
-    $('noyau-attempts-text').textContent = attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui";
-    $('noyau-clears-text').textContent = clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint";
-  }
-  $('btn-climb-noyau').disabled = c.stage === 0 || attemptsLeft === 0 || clearsLeft === 0;
-  const pipRow = $('noyau-pip-row'); pipRow.innerHTML = '';
-  const used = c.noyauDay === todayKey() ? c.noyauAttempts : 0;
-  for(let i=0;i<maxNoyauAttempts(c);i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < used ? 'used' : 'available'); pipRow.appendChild(pip); }
+  const attemptsUsed = c.noyauDay === todayKey() ? c.noyauAttempts : 0;
+  const attemptsMax = maxNoyauAttempts(c);
+
+  const attemptsText = currentLang==='en'
+    ? (attemptsLeft > 0 ? `${attemptsLeft} failure${attemptsLeft>1?'s':''} allowed today` : 'No more failures allowed today')
+    : (attemptsLeft > 0 ? `${attemptsLeft} échec${attemptsLeft>1?'s':''} autorisé${attemptsLeft>1?'s':''} aujourd'hui` : "Plus d'échecs autorisés aujourd'hui");
+  const clearsText = currentLang==='en'
+    ? (clearsLeft > 0 ? `${clearsLeft} floor${clearsLeft>1?'s':''} climbable today` : 'Daily floor cap reached')
+    : (clearsLeft > 0 ? `${clearsLeft} étage${clearsLeft>1?'s':''} franchissable${clearsLeft>1?'s':''} aujourd'hui` : "Plafond d'étages du jour atteint");
+  const climbDisabled = c.stage === 0 || attemptsLeft === 0 || clearsLeft === 0 || noyauClimbInFlight;
+  const climbLabel = currentLang==='en' ? '⚔️ Climb' : "⚔️ Tenter l'étage";
+  const floorLabel = currentLang==='en' ? 'FLOOR' : 'ÉTAGE';
+  const powerLabel = currentLang==='en' ? 'YOUR POWER' : 'TA PUISSANCE';
+  const reqLabel = currentLang==='en' ? 'FLOOR CHALLENGE' : "DÉFI DE L'ÉTAGE";
 
   const xpReward = noyauXP(floor);
   const xpFailReward = Math.max(1, Math.round(xpReward * 0.25));
-  const rewardEl = $('noyau-reward-info');
+  let rewardBody;
   if(currentLang === 'en'){
     if(isNoyauLootFloor(floor)){
-      rewardEl.textContent = `This floor's reward: +${xpReward} XP + 1 Core-exclusive item. Loss: +${xpFailReward} XP anyway.`;
+      rewardBody = `This floor's reward: +${xpReward} XP + 1 Core-exclusive item. Loss: +${xpFailReward} XP anyway.`;
     } else {
       const next = floor - (floor % 5) + 5;
-      rewardEl.textContent = `This floor's reward: +${xpReward} XP. Next item at floor ${next}. Loss: +${xpFailReward} XP anyway.`;
+      rewardBody = `This floor's reward: +${xpReward} XP. Next item at floor ${next}. Loss: +${xpFailReward} XP anyway.`;
     }
   } else {
     if(isNoyauLootFloor(floor)){
-      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP + 1 objet exclusif au Noyau. Défaite : +${xpFailReward} XP quand même.`;
+      rewardBody = `Récompense de cet étage : +${xpReward} XP + 1 objet exclusif au Noyau. Défaite : +${xpFailReward} XP quand même.`;
     } else {
       const next = floor - (floor % 5) + 5;
-      rewardEl.textContent = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Défaite : +${xpFailReward} XP quand même.`;
+      rewardBody = `Récompense de cet étage : +${xpReward} XP. Prochain objet à l'étage ${next}. Défaite : +${xpFailReward} XP quand même.`;
     }
+  }
+  // Affinité fusionnée AVEC la récompense (pas de 4e zone de texte dédiée dans le HUD
+  // Phaser générique, voir DungeonScene.js) — seul le Noyau a cette info en plus.
+  const rewardText = `${affinityText}\n${rewardBody}`;
+  $('noyau-reward-info').textContent = rewardText; // gardé à jour même masqué
+
+  const dungeonPanelActive = $('panel-dungeon') && $('panel-dungeon').classList.contains('active');
+  if(dungeonPanelActive && activeDungeonSection === 'noyau'){
+    playFxEffectSafe(Bridge => Bridge.showDungeonHUD('noyau', {
+      dungeonName: currentLang==='en' ? 'Primordial Core' : 'Noyau Primordial',
+      floorLabel, floorNum: floor,
+      powerLabel, yourPower: noyauPower(c, floor),
+      reqLabel, floorPower: noyauFloorRequirement(floor),
+      attemptsText, attemptsUsed, attemptsMax,
+      clearsText,
+      climbLabel, climbDisabled,
+      rewardText, log: noyauFightLog,
+      onClimb: handleNoyauClimbClick,
+    }));
+  }
+}
+
+let noyauClimbInFlight = false;
+
+/** Callback du bouton "Tenter l'étage" du HUD Phaser du Noyau — même structure que
+ * handleTowerClimbClick(), voir cette dernière pour le détail des commentaires. */
+async function handleNoyauClimbClick(){
+  if(noyauClimbInFlight) return;
+  if(!creature.noyauUnlocked) return;
+  const attemptsLeft = creature.noyauDay === todayKey() ? Math.max(0, maxNoyauAttempts(creature) - creature.noyauAttempts) : maxNoyauAttempts(creature);
+  const clearsLeft = creature.noyauDay === todayKey() ? Math.max(0, maxNoyauClears(creature) - creature.noyauClears) : maxNoyauClears(creature);
+  if(attemptsLeft === 0) return;
+  if(clearsLeft === 0) return;
+  noyauClimbInFlight = true;
+  renderNoyauPanel(creature);
+  try{
+    const data = await performAction('dungeon_climb_noyau', {});
+    creature = mergeDefaults(data.creature);
+    const moltyxFoundTxt = currentLang==='en'
+      ? (n) => ` ✦ Moltyx found: ${n}!`
+      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
+    if(data.win){
+      let msg = currentLang==='en'
+        ? `Core floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
+        : `Étage ${data.clearedFloor} du Noyau vaincu ! +${data.xpGain} XP.`;
+      if(data.item){
+        msg += currentLang==='en'
+          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
+          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
+      } else {
+        const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
+        msg += currentLang==='en'
+          ? ` No loot this time — next item at floor ${next}.`
+          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
+      }
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
+      pushNoyauFightLog(msg);
+    } else {
+      let msg = currentLang==='en'
+        ? `Defeat at Core floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
+        : `Défaite à l'étage ${data.failFloor} du Noyau. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
+      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
+      pushNoyauFightLog(msg);
+    }
+    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('noyau-fx-stage', { won: !!data.win }));
+    renderCreature(creature);
+  } catch(e){
+    pushNoyauFightLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'); console.error(e);
+  } finally {
+    noyauClimbInFlight = false;
+    renderNoyauPanel(creature);
   }
 }
 function formatMinutes(ms){
@@ -3659,6 +3954,14 @@ async function startApp(){
   // Fond d'arène : CELUI-LÀ dépend du boss (voir BOSS_ARENA_BG dans BossScene.js), donc
   // préchargé par bossId comme idle/attacked, pas dans le lot fixe ci-dessus.
   playFxEffectSafe(Bridge => Bridge.preloadBossArenaBg(boss.bossId));
+  // Assets fixes du HUD de la Tour du Wyrm (fond, bouton, gemmes réutilisées du Boss) —
+  // indépendants de toute donnée de partie, une seule fois pour toute la session.
+  // Chrome partagé (bouton/panneau/gemmes) + fond de la Tour, toujours pertinent dès le
+  // départ. Sanctuaire/Noyau préchargés aussi — best-effort, pas grave s'ils n'ont pas
+  // encore de fond dédié généré (voir DUNGEON_BG dans DungeonScene.js, pas de repli).
+  playFxEffectSafe(Bridge => Bridge.preloadDungeonAssets('dungeon'));
+  playFxEffectSafe(Bridge => Bridge.preloadDungeonAssets('corrupt'));
+  playFxEffectSafe(Bridge => Bridge.preloadDungeonAssets('noyau'));
   const lb = await loadLeaderboard();
   renderLeaderboard(lb, myId);
   await renderPendingBossRewards();
@@ -3781,45 +4084,6 @@ async function startApp(){
   $('btn-start-rhythm').onclick = () => startRhythm(creature);
   $('btn-start-arcane').onclick = () => startArcane(creature);
 
-  $('btn-climb').onclick = async () => {
-    const attemptsLeft = creature.dungeonDay === todayKey() ? Math.max(0, maxDungeonAttempts(creature) - creature.dungeonAttempts) : maxDungeonAttempts(creature);
-    const clearsLeft = creature.dungeonDay === todayKey() ? Math.max(0, maxDungeonClears(creature) - creature.dungeonClears) : maxDungeonClears(creature);
-    if(attemptsLeft === 0) return;
-    if(clearsLeft === 0) return;
-    let data;
-    try{ data = await performAction('dungeon_climb', {}); }
-    catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit'); console.error(e); return; }
-    creature = mergeDefaults(data.creature);
-    const moltyxFoundTxt = currentLang==='en'
-      ? (n) => ` ✦ Moltyx found: ${n}!`
-      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
-    if(data.win){
-      let msg = currentLang==='en'
-        ? `Floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
-        : `Étage ${data.clearedFloor} vaincu ! +${data.xpGain} XP.`;
-      if(data.item){
-        msg += currentLang==='en'
-          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
-          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
-      } else {
-        const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
-        msg += currentLang==='en'
-          ? ` No loot this time — next item at floor ${next}.`
-          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
-      }
-      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
-      dungeonLog(msg, 'good');
-    } else {
-      let msg = currentLang==='en'
-        ? `Defeat at floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
-        : `Défaite à l'étage ${data.failFloor}. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
-      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
-      dungeonLog(msg, 'hit');
-    }
-    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('dungeon-fx-stage', { won: !!data.win }));
-    renderCreature(creature);
-  };
-
   $('btn-unlock-corrupt').onclick = async () => {
     if(!corruptUnlockEligible(creature)) return;
     if((creature.moltcoins||0) < CORRUPT_UNLOCK_COST) return;
@@ -3831,46 +4095,6 @@ async function startApp(){
     } catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit', 'corrupt-log'); console.error(e); }
   };
 
-  $('btn-climb-corrupt').onclick = async () => {
-    if(!creature.corruptUnlocked) return;
-    const attemptsLeft = creature.corruptDay === todayKey() ? Math.max(0, maxCorruptAttempts(creature) - creature.corruptAttempts) : maxCorruptAttempts(creature);
-    const clearsLeft = creature.corruptDay === todayKey() ? Math.max(0, maxCorruptClears(creature) - creature.corruptClears) : maxCorruptClears(creature);
-    if(attemptsLeft === 0) return;
-    if(clearsLeft === 0) return;
-    let data;
-    try{ data = await performAction('dungeon_climb_corrupt', {}); }
-    catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit', 'corrupt-log'); console.error(e); return; }
-    creature = mergeDefaults(data.creature);
-    const moltyxFoundTxt = currentLang==='en'
-      ? (n) => ` ✦ Moltyx found: ${n}!`
-      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
-    if(data.win){
-      let msg = currentLang==='en'
-        ? `Sanctuary floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
-        : `Étage ${data.clearedFloor} du Sanctuaire vaincu ! +${data.xpGain} XP.`;
-      if(data.item){
-        msg += currentLang==='en'
-          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
-          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
-      } else {
-        const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
-        msg += currentLang==='en'
-          ? ` No loot this time — next item at floor ${next}.`
-          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
-      }
-      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
-      dungeonLog(msg, 'good', 'corrupt-log');
-    } else {
-      let msg = currentLang==='en'
-        ? `Defeat at Sanctuary floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
-        : `Défaite à l'étage ${data.failFloor} du Sanctuaire. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
-      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
-      dungeonLog(msg, 'hit', 'corrupt-log');
-    }
-    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('corrupt-fx-stage', { won: !!data.win }));
-    renderCreature(creature);
-  };
-
   $('btn-unlock-noyau').onclick = async () => {
     if(!noyauUnlockEligible(creature)) return;
     if((creature.moltcoins||0) < NOYAU_UNLOCK_COST) return;
@@ -3880,46 +4104,6 @@ async function startApp(){
       dungeonLog(currentLang==='en' ? `The Primordial Core opens to ${creature.name}...` : `Le Noyau Primordial s'ouvre à ${creature.name}...`, 'good', 'noyau-log');
       renderCreature(creature);
     } catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit', 'noyau-log'); console.error(e); }
-  };
-
-  $('btn-climb-noyau').onclick = async () => {
-    if(!creature.noyauUnlocked) return;
-    const attemptsLeft = creature.noyauDay === todayKey() ? Math.max(0, maxNoyauAttempts(creature) - creature.noyauAttempts) : maxNoyauAttempts(creature);
-    const clearsLeft = creature.noyauDay === todayKey() ? Math.max(0, maxNoyauClears(creature) - creature.noyauClears) : maxNoyauClears(creature);
-    if(attemptsLeft === 0) return;
-    if(clearsLeft === 0) return;
-    let data;
-    try{ data = await performAction('dungeon_climb_noyau', {}); }
-    catch(e){ dungeonLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit', 'noyau-log'); console.error(e); return; }
-    creature = mergeDefaults(data.creature);
-    const moltyxFoundTxt = currentLang==='en'
-      ? (n) => ` ✦ Moltyx found: ${n}!`
-      : (n) => ` ✦ Moltyx trouvé : ${n} !`;
-    if(data.win){
-      let msg = currentLang==='en'
-        ? `Core floor ${data.clearedFloor} cleared! +${data.xpGain} XP.`
-        : `Étage ${data.clearedFloor} du Noyau vaincu ! +${data.xpGain} XP.`;
-      if(data.item){
-        msg += currentLang==='en'
-          ? ` Loot: ${itemDisplayName(data.item)} (${RARITY_LABEL_EN[data.item.rarity]}).`
-          : ` Butin : ${itemDisplayName(data.item)} (${RARITY_LABEL[data.item.rarity]}).`;
-      } else {
-        const next = data.clearedFloor - (data.clearedFloor % 5) + 5;
-        msg += currentLang==='en'
-          ? ` No loot this time — next item at floor ${next}.`
-          : ` Pas de butin cette fois — prochain objet à l'étage ${next}.`;
-      }
-      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
-      dungeonLog(msg, 'good', 'noyau-log');
-    } else {
-      let msg = currentLang==='en'
-        ? `Defeat at Core floor ${data.failFloor}. +${data.xpGain} XP anyway. Strengthen ${creature.name} and try again.`
-        : `Défaite à l'étage ${data.failFloor} du Noyau. +${data.xpGain} XP quand même. Renforce ${creature.name} et retente.`;
-      if(data.uniqueFound) msg += moltyxFoundTxt(itemDisplayName(data.uniqueFound));
-      dungeonLog(msg, 'hit', 'noyau-log');
-    }
-    playFxEffectSafe(Bridge => Bridge.playDungeonEffect('noyau-fx-stage', { won: !!data.win }));
-    renderCreature(creature);
   };
 
   // ---------- Pont Phaser — effets visuels ponctuels (Trésor/Donjons/Boss) ----------

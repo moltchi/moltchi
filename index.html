@@ -447,72 +447,107 @@
 
   <!-- DUNGEON PANEL -->
   <div class="panel" id="panel-dungeon">
-    <div class="card">
-      <h2 data-i18n="h2_wyrm_tower">Tour du Wyrm</h2>
-<img src="media/wyrmtower.png" style="display: block; margin: 0 auto;">
-      <div class="floor-display"><div class="floor-num" id="floor-num">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
-      <div class="dungeon-reward-info" id="dungeon-reward-info" style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);text-align:center;margin-bottom:12px;"></div>
-      <div class="power-compare">
-        <div class="power-side"><div class="val" id="your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
-        <div class="power-vs">VS</div>
-        <div class="power-side"><div class="val" id="floor-power" style="color:var(--ember-bright);">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
-      </div>
-      <div id="dungeon-fx-stage" class="fx-stage"></div>
-      <div class="attempts-row">
-        <div><div class="attempts-left" id="dungeon-attempts-text"></div><div class="pip-row" id="dungeon-pip-row"></div>
-          <div class="attempts-left" id="dungeon-clears-text" style="margin-top:6px;"></div></div>
-        <button id="btn-climb" class="primary big" data-i18n="btn_climb">⚔️ Tenter l'étage</button>
-      </div>
-      <div class="log" id="dungeon-log"></div>
+    <!-- Sélecteur de donjon : un seul affiché à la fois (contrainte du canvas Phaser
+         partagé — un seul rendu riche possible en même temps, voir la conversation). Le
+         clic bascule la section visible ET pousse le HUD Phaser vers ce donjon (voir
+         dungeonSectionButtons dans app.js). Plus de carte autour : les boutons ont
+         maintenant leur propre cadre en image, l'encadré devenait redondant. -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:12px;">
+      <button class="dungeon-section-btn active" data-dungeon-section="dungeon" data-i18n="h2_wyrm_tower">Tour du Wyrm</button>
+      <button class="dungeon-section-btn" data-dungeon-section="corrupt" data-i18n="h2_corrupt">Sanctuaire Corrompu</button>
+      <button class="dungeon-section-btn" data-dungeon-section="noyau" data-i18n="h2_noyau">Noyau Primordial</button>
     </div>
 
+    <div id="dungeon-section-dungeon" class="dungeon-section">
+    <div class="card">
+      <h2 data-i18n="h2_wyrm_tower" style="display:none">Tour du Wyrm</h2>
+      <!-- Ancienne image statique retirée (redondante avec le nouveau fond Phaser
+           ci-dessous). Étage/puissance/tentatives/bouton absorbés dans le HUD Phaser — les
+           éléments HTML correspondants restent dans le code (masqués) plutôt que
+           supprimés, au cas où le HUD Phaser échoue à charger un jour (aucun repli
+           volontairement pour l'instant, voir la conversation, mais ça reste facile à
+           réactiver si besoin). -->
+      <div id="dungeon-fx-wrap" style="width:100%;aspect-ratio:1376/1119;position:relative;margin-bottom:10px;">
+        <div id="dungeon-fx-stage" class="fx-stage dungeon-fx-stage"></div>
+      </div>
+      <div style="display:none">
+        <img src="media/wyrmtower.png">
+        <div class="floor-display"><div class="floor-num" id="floor-num">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
+        <div class="dungeon-reward-info" id="dungeon-reward-info"></div>
+        <div class="power-compare">
+          <div class="power-side"><div class="val" id="your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
+          <div class="power-vs">VS</div>
+          <div class="power-side"><div class="val" id="floor-power" style="color:var(--ember-bright);">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
+        </div>
+        <div class="attempts-row">
+          <div><div class="attempts-left" id="dungeon-attempts-text"></div><div class="pip-row" id="dungeon-pip-row"></div>
+            <div class="attempts-left" id="dungeon-clears-text" style="margin-top:6px;"></div></div>
+          <button id="btn-climb" class="primary big" data-i18n="btn_climb">⚔️ Tenter l'étage</button>
+        </div>
+        <div class="log" id="dungeon-log"></div>
+      </div>
+    </div>
+    </div>
+
+    <div id="dungeon-section-corrupt" class="dungeon-section" style="display:none;">
     <div class="card" id="corrupt-locked-card" style="text-align:center;">
       <h2 data-i18n="h2_corrupt_locked">🔒 Sanctuaire Corrompu</h2>
       <p id="corrupt-req-text" style="font-family:var(--font-mono);font-size:13px;margin-top:10px;"></p>
       <button id="btn-unlock-corrupt" class="primary big" data-i18n="btn_unlock_corrupt" style="margin-top:14px;">Débloquer — 🪙 2000 Moltcoins</button>
     </div>
     <div class="card" id="corrupt-play-card" style="display:none;">
-      <h2 data-i18n="h2_corrupt">Sanctuaire Corrompu</h2>
-<img src="media/sanctuaire.png" style="display: block; margin: 0 auto;">
-      <div class="floor-display"><div class="floor-num" id="corrupt-floor-num" style="color:#b060e0;">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
-      <div class="dungeon-reward-info" id="corrupt-reward-info" style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);text-align:center;margin-bottom:12px;"></div>
-      <div class="power-compare">
-        <div class="power-side"><div class="val" id="corrupt-your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
-        <div class="power-vs">VS</div>
-        <div class="power-side"><div class="val" id="corrupt-floor-power" style="color:#b060e0;">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
+      <h2 data-i18n="h2_corrupt" style="display:none">Sanctuaire Corrompu</h2>
+      <div id="corrupt-fx-wrap" style="width:100%;aspect-ratio:1376/1119;position:relative;margin-bottom:10px;">
+        <div id="corrupt-fx-stage" class="fx-stage dungeon-fx-stage"></div>
       </div>
-      <div id="corrupt-fx-stage" class="fx-stage"></div>
-      <div class="attempts-row">
-        <div><div class="attempts-left" id="corrupt-attempts-text"></div><div class="pip-row" id="corrupt-pip-row"></div>
-          <div class="attempts-left" id="corrupt-clears-text" style="margin-top:6px;"></div></div>
-        <button id="btn-climb-corrupt" class="primary big" data-i18n="btn_climb_corrupt">☠️ Tenter l'étage</button>
+      <div style="display:none">
+        <img src="media/sanctuaire.png">
+        <div class="floor-display"><div class="floor-num" id="corrupt-floor-num" style="color:#b060e0;">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
+        <div class="dungeon-reward-info" id="corrupt-reward-info"></div>
+        <div class="power-compare">
+          <div class="power-side"><div class="val" id="corrupt-your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
+          <div class="power-vs">VS</div>
+          <div class="power-side"><div class="val" id="corrupt-floor-power" style="color:#b060e0;">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
+        </div>
+        <div class="attempts-row">
+          <div><div class="attempts-left" id="corrupt-attempts-text"></div><div class="pip-row" id="corrupt-pip-row"></div>
+            <div class="attempts-left" id="corrupt-clears-text" style="margin-top:6px;"></div></div>
+          <button id="btn-climb-corrupt" class="primary big" data-i18n="btn_climb_corrupt">☠️ Tenter l'étage</button>
+        </div>
+        <div class="log" id="corrupt-log"></div>
       </div>
-      <div class="log" id="corrupt-log"></div>
+    </div>
     </div>
 
+    <div id="dungeon-section-noyau" class="dungeon-section" style="display:none;">
     <div class="card" id="noyau-locked-card" style="text-align:center;">
       <h2 data-i18n="h2_noyau_locked">🔒 Noyau Primordial</h2>
       <p id="noyau-req-text" style="font-family:var(--font-mono);font-size:13px;margin-top:10px;"></p>
       <button id="btn-unlock-noyau" class="primary big" data-i18n="btn_unlock_noyau" style="margin-top:14px;">Débloquer — 🪙 2000 Moltcoins</button>
     </div>
     <div class="card" id="noyau-play-card" style="display:none;">
-      <h2 data-i18n="h2_noyau">Noyau Primordial</h2>
-<img src="media/noyau.png" style="display: block; margin: 0 auto;">
-      <div class="floor-display"><div class="floor-num" id="noyau-floor-num" style="color:#e0c060;">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
-      <p id="noyau-affinity-text" style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);text-align:center;margin:-4px 0 10px;"></p>
-      <div class="dungeon-reward-info" id="noyau-reward-info" style="font-family:var(--font-mono);font-size:12px;color:var(--ivory-dim);text-align:center;margin-bottom:12px;"></div>
-      <div class="power-compare">
-        <div class="power-side"><div class="val" id="noyau-your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
-        <div class="power-vs">VS</div>
-        <div class="power-side"><div class="val" id="noyau-floor-power" style="color:#e0c060;">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
+      <h2 data-i18n="h2_noyau" style="display:none">Noyau Primordial</h2>
+      <div id="noyau-fx-wrap" style="width:100%;aspect-ratio:1376/1119;position:relative;margin-bottom:10px;">
+        <div id="noyau-fx-stage" class="fx-stage dungeon-fx-stage"></div>
       </div>
-      <div id="noyau-fx-stage" class="fx-stage"></div>
-      <div class="attempts-row">
-        <div><div class="attempts-left" id="noyau-attempts-text"></div><div class="pip-row" id="noyau-pip-row"></div>
-          <div class="attempts-left" id="noyau-clears-text" style="margin-top:6px;"></div></div>
-        <button id="btn-climb-noyau" class="primary big" data-i18n="btn_climb_noyau">🌀 Tenter l'étage</button>
+      <div style="display:none">
+        <img src="media/noyau.png">
+        <div class="floor-display"><div class="floor-num" id="noyau-floor-num" style="color:#e0c060;">1</div><div class="floor-label" data-i18n="lbl_current_floor">Étage actuel</div></div>
+        <p id="noyau-affinity-text"></p>
+        <div class="dungeon-reward-info" id="noyau-reward-info"></div>
+        <div class="power-compare">
+          <div class="power-side"><div class="val" id="noyau-your-power" style="color:var(--gold);">0</div><div class="lbl" data-i18n="lbl_your_power">Ta puissance</div></div>
+          <div class="power-vs">VS</div>
+          <div class="power-side"><div class="val" id="noyau-floor-power" style="color:#e0c060;">0</div><div class="lbl" data-i18n="lbl_floor_challenge">Défi de l'étage</div></div>
+        </div>
+        <div class="attempts-row">
+          <div><div class="attempts-left" id="noyau-attempts-text"></div><div class="pip-row" id="noyau-pip-row"></div>
+            <div class="attempts-left" id="noyau-clears-text" style="margin-top:6px;"></div></div>
+          <button id="btn-climb-noyau" class="primary big" data-i18n="btn_climb_noyau">🌀 Tenter l'étage</button>
+        </div>
+        <div class="log" id="noyau-log"></div>
       </div>
-      <div class="log" id="noyau-log"></div>
+    </div>
     </div>
   </div>
 
