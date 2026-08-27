@@ -273,6 +273,7 @@ export default class BossScene extends Phaser.Scene {
     const timerSize = fp(0.020, 6, 8);
     const hpTextSize = fp(0.020, 6, 8);
     const attemptsSize = fp(0.020, 6, 8);
+    const logSize = fp(0.020, 6, 8);
     const weaknessIconSize = fp(0.065, 16, 24);
 
     const nameColW = width * 0.20;
@@ -313,19 +314,26 @@ export default class BossScene extends Phaser.Scene {
     this._arenaCenterY = (topRowY1 + bottomRowY0) / 2;
     this._arenaMaxSize = Math.max(40, Math.min(width - nameColW, bottomRowY0 - topRowY1) * 0.85);
 
-    // --- Rangée basse : bouton (gauche, agrandi — l'espace du log retiré lui revient) |
-    // tentatives+gemmes (droite). Log ENTIÈREMENT retiré du mobile (voir la conversation :
-    // le panneau était trop petit pour rester lisible à cette taille), les messages de
-    // combat restent visibles côté desktop uniquement.
-    const btnColX1 = width * 0.62;
-    const attemptsColX0 = width * 0.65;
+    // --- Rangée basse : logs (gauche, texte SEUL, sans image de cadre — voir la
+    // conversation) | bouton (centre, à sa place d'origine) | tentatives+gemmes (droite) ---
+    const logColW = width * 0.40;
+    const btnColX0 = logColW, btnColX1 = width * 0.73;
+    const attemptsColX0 = width * 0.73;
 
-    // Bouton Attaquer, centré dans sa colonne (élargie), jamais coupé (hauteur bornée à la
-    // rangée basse).
-    const btnDisplayW = btnColX1 - 16;
+    // Texte du log seul, SANS boss_log_panel.png derrière (juste le contour/l'image de
+    // cadre retiré, pas le texte lui-même).
+    const logDisplayW = logColW - 12;
+    const logX = 8, logY = bottomRowY0;
+    this._logText = this._track(this.add.text(logX, logY, '', {
+      fontFamily: FONT_FAMILY, fontSize: logSize + 'px', color: '#fff6e6', ...stroke,
+      lineSpacing: Math.round(logSize * 0.4), wordWrap: { width: logDisplayW },
+    }).setDepth(UI_DEPTH + 0.3));
+
+    // Bouton Attaquer, centré dans sa colonne, jamais coupé (hauteur bornée à la rangée basse).
+    const btnColW = btnColX1 - btnColX0;
+    const btnDisplayW = btnColW - 8;
     const btnMaxH = bottomRowY1 - bottomRowY0;
-    this._buildAttackButtonObject(8, bottomRowY0, btnDisplayW, false, height, btnMaxH);
-    this._logText = null; // pas de panneau de log en mobile
+    this._buildAttackButtonObject(btnColX0 + 4, bottomRowY0, btnDisplayW, false, height, btnMaxH);
 
     // Gemmes + tentatives, colonne droite de la rangée basse.
     this._pipRowX = attemptsColX0;
