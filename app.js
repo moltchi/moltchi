@@ -2668,7 +2668,7 @@ function renderBoss(boss){
   const attemptsLeft = Math.max(0, attemptsMax - attemptsUsed);
   const attemptsText = attemptsLeft > 0
     ? (currentLang==='en' ? `${attemptsLeft} attack${attemptsLeft>1?'s':''} left today` : `${attemptsLeft} attaque${attemptsLeft>1?'s':''} restante${attemptsLeft>1?'s':''} aujourd'hui`)
-    : (currentLang==='en' ? 'Come back tomorrow to attack again' : `Reviens demain pour attaquer à nouveau`);
+    : (currentLang==='en' ? 'Come back tomorrow' : `Reviens demain`);
   const attackLabel = currentLang==='en' ? '⚔️ Attack' : '⚔️ Attaquer';
 
   // Ne pousse vers Phaser QUE si l'onglet Boss est réellement affiché — renderBoss() est
