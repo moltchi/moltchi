@@ -3263,10 +3263,10 @@ async function startArcane(c){
 // ============================================================
 // ============ RENDU DONJON (Tour / Sanctuaire / Noyau) ============
 // ============================================================
-// Les 3 vivent dans LE MÊME panneau HTML (#panel-dungeon), empilés en scroll. Comme il n'y
-// a qu'un seul canvas Phaser partagé pour toute l'app, un seul des 3 peut avoir le rendu
-// riche à la fois — activeDungeonSection indique lequel, mis à jour par
-// l'IntersectionObserver plus bas (suit le scroll du joueur).
+// Les 3 vivent dans LE MÊME panneau HTML (#panel-dungeon) — un seul des 3 affiché à la
+// fois. Comme il n'y a qu'un seul canvas Phaser partagé pour toute l'app, un seul des 3
+// peut avoir le rendu riche à la fois — activeDungeonSection indique lequel, mis à jour par
+// les boutons de sélection (voir dungeon-section-btn dans index.html/app.js).
 let activeDungeonSection = 'dungeon';
 
 // Logs de combat, INDÉPENDANTS de log()/#log — un par donjon, alimentés uniquement par
@@ -3285,6 +3285,29 @@ let noyauFightLog = [];
 function pushNoyauFightLog(msg){
   noyauFightLog.unshift(msg);
   if(noyauFightLog.length > 20) noyauFightLog.length = 20;
+}
+
+/**
+ * Callback passé en onContentHeight à Bridge.showDungeonHUD() (voir DungeonScene.js) :
+ * DungeonScene calcule la hauteur RÉELLEMENT nécessaire pour que tout tienne (texte de
+ * récompense compris, qui peut prendre plus de lignes que prévu sur un écran étroit — voir
+ * la conversation, le texte se faisait couper en bas sur mobile avec une marge fixe
+ * devinée). Si le conteneur actuel est trop court, on l'agrandit en vrai (override de
+ * l'aspect-ratio CSS par une hauteur fixe en px) et on redemande un rendu pour que Phaser
+ * reconstruise avec la place suffisante. Ne redimensionne que si l'écart est significatif
+ * (>4px) pour ne jamais boucler : une fois la bonne hauteur appliquée, l'appel suivant ne
+ * trouve plus d'écart et s'arrête naturellement.
+ */
+function makeDungeonContentHeightHandler(wrapId, rerender){
+  return (neededPx) => {
+    const wrap = $(wrapId);
+    if(!wrap) return;
+    if(neededPx > wrap.clientHeight + 4){
+      wrap.style.aspectRatio = 'auto';
+      wrap.style.height = neededPx + 'px';
+      rerender();
+    }
+  };
 }
 
 function renderDungeonPanel(c){
@@ -3341,6 +3364,7 @@ function renderDungeonPanel(c){
       climbLabel, climbDisabled,
       rewardText, log: dungeonFightLog,
       onClimb: handleTowerClimbClick,
+      onContentHeight: makeDungeonContentHeightHandler('dungeon-fx-wrap', () => renderDungeonPanel(creature)),
     }));
   }
   renderCodex(c);
@@ -3485,6 +3509,7 @@ function renderCorruptPanel(c){
       climbLabel, climbDisabled,
       rewardText, log: corruptFightLog,
       onClimb: handleCorruptClimbClick,
+      onContentHeight: makeDungeonContentHeightHandler('corrupt-fx-wrap', () => renderCorruptPanel(creature)),
     }));
   }
 }
@@ -3641,6 +3666,7 @@ function renderNoyauPanel(c){
       climbLabel, climbDisabled,
       rewardText, log: noyauFightLog,
       onClimb: handleNoyauClimbClick,
+      onContentHeight: makeDungeonContentHeightHandler('noyau-fx-wrap', () => renderNoyauPanel(creature)),
     }));
   }
 }
