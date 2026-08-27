@@ -134,6 +134,17 @@ export default class DungeonScene extends Phaser.Scene {
     const logLineCount = this._isMobileLike ? 1 : 3;
     const logLines = (data.log || []).slice(0, logLineCount);
     this._logText.setText(logLines.length ? logLines.join('\n') : '…');
+
+    // Hauteur RÉELLEMENT nécessaire pour tout faire tenir (décor + panneau + récompense),
+    // une fois le texte de récompense posé — peut dépasser la hauteur actuelle du canvas si
+    // le texte prend plus de lignes que prévu (écran étroit, texte long...). app.js peut
+    // s'en servir pour agrandir #dungeon-fx-wrap et redemander un rendu, plutôt que de
+    // deviner une marge fixe à l'avance qui finit toujours par être prise en défaut un jour
+    // (voir la conversation).
+    if(typeof data.onContentHeight === 'function'){
+      const neededHeight = Math.ceil(this._rewardText.y + this._rewardText.height + 14);
+      data.onContentHeight(neededHeight);
+    }
   }
 
   _buildStaticUI(dungeonKey){
