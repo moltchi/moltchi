@@ -205,6 +205,12 @@ function _moveCanvasTo(containerId){
     const bossScene = _game.scene.getScene('BossScene');
     if(bossScene && typeof bossScene.stopIdle === 'function') bossScene.stopIdle();
   }
+  if(!['dungeon-fx-stage', 'corrupt-fx-stage', 'noyau-fx-stage'].includes(containerId)){
+    // Même raison d'être, pour le HUD complet des donjons (voir DungeonScene.js) — couvre
+    // les 3 conteneurs (Tour/Sanctuaire/Noyau) d'un coup, un seul jeu de méthodes partagé.
+    const dungeonScene = _game.scene.getScene('DungeonScene');
+    if(dungeonScene && typeof dungeonScene.stopDungeonHUD === 'function') dungeonScene.stopDungeonHUD();
+  }
   container.appendChild(_game.canvas);
   _game.scale.resize(container.clientWidth || 300, container.clientHeight || 300);
   return true;
@@ -494,6 +500,53 @@ function reclaimCreatureStage(){
   return true;
 }
 
+// Correspondance dungeonKey -> id du conteneur DOM cible (les 3 vivent dans le même
+// panneau HTML #panel-dungeon, empilés en scroll — voir la note en tête de
+// DungeonScene.js).
+const DUNGEON_CONTAINER = {
+  dungeon: 'dungeon-fx-stage',
+  corrupt: 'corrupt-fx-stage',
+  noyau: 'noyau-fx-stage',
+};
+
+/**
+ * Affiche/actualise le HUD complet d'un des 3 donjons (fond, étage, puissance vs défi,
+ * tentatives, bouton Tenter l'étage interactif, panneau récompense+log) — voir
+ * DungeonScene.showDungeonHUD(). Le clic sur le bouton appelle data.onClimb fourni par
+ * app.js (qui fait le vrai appel réseau vers perform-action). Ne touche pas à l'effet de
+ * choc d'épées (playClimb) — à appeler séparément via playDungeonEffect(containerId, result).
+ * @param {'dungeon'|'corrupt'|'noyau'} dungeonKey
+ * @param {object} data - voir la JSDoc de DungeonScene.showDungeonHUD() pour la forme exacte.
+ * @returns {boolean}
+ */
+function showDungeonHUD(dungeonKey, data){
+  if(!_ready || !_game || !data) return false;
+  const containerId = DUNGEON_CONTAINER[dungeonKey];
+  if(!containerId) return false;
+  const scene = _game.scene.getScene('DungeonScene');
+  if(!scene || typeof scene.showDungeonHUD !== 'function') return false;
+  if(!_moveCanvasTo(containerId)) return false;
+  scene.showDungeonHUD(dungeonKey, data);
+  return true;
+}
+
+/**
+ * Précharge en tâche de fond les assets d'un donjon donné : le chrome partagé (bouton,
+ * panneau, gemmes — une seule fois pour toute la session, peu importe le donjon) + le fond
+ * spécifique à ce donjon.
+ * @param {'dungeon'|'corrupt'|'noyau'} dungeonKey
+ * @returns {Promise<boolean>}
+ */
+function preloadDungeonAssets(dungeonKey){
+  if(!_ready || !_game) return Promise.resolve(false);
+  const scene = _game.scene.getScene('DungeonScene');
+  if(!scene) return Promise.resolve(false);
+  return Promise.all([
+    typeof scene.preloadSharedAssets === 'function' ? scene.preloadSharedAssets() : Promise.resolve(),
+    typeof scene.preloadDungeonBg === 'function' ? scene.preloadDungeonBg(dungeonKey) : Promise.resolve(),
+  ]).then(() => true);
+}
+
 export const Bridge = {
   isReady, ensureLoaded, playCareAnimation,
   startReflexGame, startMemoryGame, startRhythmGame, startArcaneGame,
@@ -501,4 +554,5 @@ export const Bridge = {
   playTreasureEffect, playDungeonEffect, playBossEffect,
   showBossIdle, showBossAttacked, preloadBossIdle, preloadBossAttacked, preloadBossSlash,
   showBossBattleUI, setBossHp, preloadBossBattleUIAssets, preloadBossArenaBg, reclaimCreatureStage,
+  showDungeonHUD, preloadDungeonAssets,
 };
