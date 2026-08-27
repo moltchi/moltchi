@@ -2224,9 +2224,14 @@ function renderCreature(c){
       const dValue = liveDef ? liveDef.value : item.value;
       const dStat2 = liveDef ? liveDef.stat2 : item.stat2;
       const dValue2 = liveDef ? liveDef.value2 : item.value2;
-      const desc = isUnique ? (item.special ? `${UNIQUE_ITEM_DB.find(u=>u.id===item.defId)?.description || ''}` : '') : `+${dValue} ${statLabel[dStat]}${dStat2 ? ` / +${dValue2} ${statLabel[dStat2]}` : ''}`;
-      const icon = isUnique ? '✦' : (STAT_ICON[dStat] || '❔');
-      const accent = isUnique ? 'var(--ember-bright)' : STAT_ACCENT[dStat];
+      const dAllStat = liveDef ? liveDef.allStat : item.allStat;
+      const desc = isUnique
+        ? (item.special ? `${UNIQUE_ITEM_DB.find(u=>u.id===item.defId)?.description || ''}` : '')
+        : dAllStat
+          ? (currentLang==='en' ? `+${dAllStat} to all 4 stats` : `+${dAllStat} sur les 4 stats`)
+          : `+${dValue} ${statLabel[dStat]}${dStat2 ? ` / +${dValue2} ${statLabel[dStat2]}` : ''}`;
+      const icon = isUnique ? '✦' : dAllStat ? '🔮' : (STAT_ICON[dStat] || '❔');
+      const accent = isUnique ? 'var(--ember-bright)' : dAllStat ? 'var(--gold)' : STAT_ACCENT[dStat];
       li.style.setProperty('--item-accent', accent);
       const btnLabel = item.equipped
         ? (currentLang === 'en' ? '✓ Equipped' : '✓ Équipé')
