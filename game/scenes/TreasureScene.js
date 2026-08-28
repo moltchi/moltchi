@@ -92,6 +92,11 @@ export default class TreasureScene extends Phaser.Scene {
     this._moltcoinsText.setText(`${data.moltcoins.toLocaleString()}`);
 
     this._apText.setText(data.apText || '');
+    // Recalculé APRÈS avoir posé le vrai texte (pas à la construction, où le texte est
+    // encore vide donc quasi sans hauteur) — sinon les gemmes restent calées sur un texte
+    // vide et chevauchent le vrai texte une fois affiché, surtout s'il passe sur 2 lignes
+    // sur un écran étroit (voir la conversation).
+    this._pipRowY = this._apText.y - this._apText.height - 10;
     this._updatePips(data.apUsed, data.apMax);
     this._updateDigButton(data.digLabel, data.digDisabled);
 
@@ -165,7 +170,9 @@ export default class TreasureScene extends Phaser.Scene {
       fontFamily: FONT_FAMILY, fontSize: apLabelSize + 'px', color: '#f4efe6', ...stroke,
       wordWrap: { width: width * 0.6 }, lineSpacing: 2,
     }).setOrigin(0, 1).setDepth(HUD_DEPTH + 0.2));
-    this._pipRowY = bgDisplayH - 16 - this._apText.height - 10;
+    // Position Y réelle recalculée dans showTreasureHUD() une fois le texte posé (voir
+    // plus haut) — celle-ci n'est qu'un point de départ provisoire avant tout contenu réel.
+    this._pipRowY = bgDisplayH - 16;
     this._pipSize = Math.max(11, Math.round(width * 0.022));
 
     // --- Bouton "Fouiller", bas droite DU DÉCOR ---
