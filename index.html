@@ -738,6 +738,23 @@
     </div>
   </div>
 
+  <!-- Modal de bienvenue : affiché UNE SEULE FOIS, juste après la toute première éclosion
+       (voir openWelcomeModal() dans app.js, appelé depuis pickSpecies()). Objectif : donner
+       une direction claire dans les 3 premières minutes plutôt que de laisser le joueur
+       face aux 12 onglets qui viennent de se débloquer d'un coup — voir la conversation. -->
+  <div id="welcome-modal-overlay" class="terms-modal-overlay" style="display:none;">
+    <div class="terms-modal">
+      <button id="btn-close-welcome" class="terms-modal-close">✕</button>
+      <div class="terms-modal-content" style="text-align:center;">
+        <h2 id="welcome-modal-title">🥚 Bienvenue !</h2>
+        <p data-i18n="welcome_p1" style="margin-top:14px;">Ton Moltchi a besoin de toi : nourris-le, joue avec lui et laisse-le se reposer — tout se passe dans l'onglet <strong>Ma créature</strong>.</p>
+        <p data-i18n="welcome_p2">Pour le rendre plus fort, essaie les mini-jeux de l'onglet <strong>Entraînement</strong>.</p>
+        <p data-i18n="welcome_p3" style="color:var(--ivory-dim);font-size:13px;">Donjons, Boss Mondial, boutique et bien plus t'attendent — à ton rythme, quand tu seras prêt.</p>
+        <button id="btn-close-welcome-2" class="primary streak-claim-btn" data-i18n="welcome_cta" style="margin-top:10px;">C'est parti !</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CHAT BUBBLE (widget flottant, toujours accessible une fois connecté) -->
   <div id="chat-bubble-window" class="chat-bubble-window">
     <div class="chat-bubble-tail"></div>

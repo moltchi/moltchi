@@ -255,6 +255,10 @@ const I18N_EN = {
   footer_rights: 'All rights reserved.',
   footer_terms: 'Terms of Service & Sale',
   streak_title: 'Daily Login Bonus',
+  welcome_p1: 'Your Moltchi needs you: feed it, play with it, and let it rest — it all happens in the <strong>My Creature</strong> tab.',
+  welcome_p2: 'To make it stronger, try the mini-games in the <strong>Training</strong> tab.',
+  welcome_p3: "Dungeons, the World Boss, the shop and more await — at your own pace, whenever you're ready.",
+  welcome_cta: "Let's go!",
   streak_claim: 'Claim',
 
   // --- Ajouts audit i18n HTML du 16/08/2026 ---
@@ -2118,6 +2122,7 @@ async function pickSpecies(key){
     creature = mergeDefaults(data.creature);
     renderCreature(creature);
     log(`${creature.name} le ${SPECIES[creature.species].name} a éclos !`);
+    openWelcomeModal();
   } catch(e){ log(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.', 'hit'); console.error(e); }
 }
 
@@ -2928,6 +2933,22 @@ async function claimDailyStreak(){
 $('btn-claim-streak').onclick = claimDailyStreak;
 $('btn-close-streak').onclick = () => { $('streak-modal-overlay').style.display = 'none'; };
 $('streak-modal-overlay').onclick = (e) => { if(e.target.id === 'streak-modal-overlay') $('streak-modal-overlay').style.display = 'none'; };
+
+/**
+ * Affiche le modal de bienvenue — appelé UNIQUEMENT depuis pickSpecies() juste après une
+ * éclosion réussie, donc déjà naturellement "une seule fois par joueur" sans avoir besoin
+ * d'un drapeau localStorage séparé (l'éclosion elle-même ne se produit qu'une fois). Objectif :
+ * donner une direction claire dès la première minute plutôt que de laisser le joueur face aux
+ * 12 onglets qui viennent de se débloquer d'un coup (voir la conversation).
+ */
+function openWelcomeModal(){
+  const overlay = $('welcome-modal-overlay');
+  if(!overlay) return;
+  overlay.style.display = 'flex';
+}
+$('btn-close-welcome').onclick = () => { $('welcome-modal-overlay').style.display = 'none'; };
+$('btn-close-welcome-2').onclick = () => { $('welcome-modal-overlay').style.display = 'none'; };
+$('welcome-modal-overlay').onclick = (e) => { if(e.target.id === 'welcome-modal-overlay') $('welcome-modal-overlay').style.display = 'none'; };
 
 // Affiche les récompenses hebdomadaires du Boss Mondial en attente pour ce joueur
 // (calculées lors du dernier reset de cycle) et permet de toutes les réclamer d'un coup.
