@@ -672,11 +672,15 @@
       <div id="shop-items" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;"></div>
       <div class="log" id="shop-log"></div>
     </div>
-    <div class="card" id="shop-premium-card">
-      <h2 data-i18n="h2_shop_premium">✦ Eclat du Négociateur</h2>
-      <p data-i18n="p_shop_premium_desc">Un Moltyx exclusif, achetable une seule fois par compte. Une fois équipé, il réduit de <strong>-25%</strong> le prix Moltcoins de tous les objets de la Boutique.</p>
-      <p data-i18n="p_shop_premium_soon" style="font-size:12px;color:var(--ivory-dim);">Achat en argent réel — bientôt disponible.</p>
-      <button id="btn-buy-negotiator" disabled data-i18n="btn_shop_premium_buy">Acheter (bientôt disponible)</button>
+    <div class="card" id="mystery-chest-card">
+      <h2 data-i18n="h2_mystery_chest">🎁 Coffre Mystère</h2>
+      <p data-i18n="p_mystery_chest_desc">Moltcoins garantis + chance de bonbon, d'objet (jusqu'à légendaire, tiré parmi ceux de ton donjon le plus avancé) et même de l'Éclat du Négociateur — un Moltyx exclusif, introuvable ailleurs.</p>
+      <p class="attempts-left" id="mystery-chest-status" style="text-align:center;margin-top:10px;"></p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px;">
+        <button id="btn-buy-mystery-chest" class="primary" data-i18n="btn_mystery_chest_buy">🎁 Ouvrir — 🪙 300 Moltcoins</button>
+        <button id="btn-unlock-mystery-unlimited" data-i18n="btn_mystery_unlimited_buy">✦ Illimité aujourd'hui — 0,99€</button>
+      </div>
+      <div class="log" id="mystery-chest-log"></div>
     </div>
   </div>
 

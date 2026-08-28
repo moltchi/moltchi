@@ -241,10 +241,10 @@ const I18N_EN = {
   p_chests_reset: 'Reset every day',
   p_shop_intro: 'A different legendary item from each dungeon, on sale this week only — one purchase per player per week, for each.',
   p_shop_reset: 'Refreshes every week',
-  h2_shop_premium: '✦ Shard of the Negotiator',
-  p_shop_premium_desc: 'An exclusive Moltyx, purchasable once per account. Once equipped, it lowers the Moltcoin price of all Shop items by <strong>-25%</strong>.',
-  p_shop_premium_soon: 'Real-money purchase — coming soon.',
-  btn_shop_premium_buy: 'Buy (coming soon)',
+  h2_mystery_chest: '🎁 Mystery Chest',
+  p_mystery_chest_desc: "Guaranteed Moltcoins + a chance of candy, gear (up to legendary, drawn from your furthest unlocked dungeon), and even the Shard of the Negotiator — an exclusive Moltyx found nowhere else.",
+  btn_mystery_chest_buy: '🎁 Open — 🪙 300 Moltcoins',
+  btn_mystery_unlimited_buy: '✦ Unlimited today — €0.99',
   p_treasure_intro: 'Spend <strong>action points</strong> to dig and collect <strong>Moltcoins</strong> 🪙, Moltchi\'s currency. Very rare digs can also reveal a Compendium item.',
   p_lore_1: '"Before the Moltchi hatched, before even the Wyrm Tower, the world was but a single heart of moss, ivory and amber. When that heart shattered, its shards scattered — into the deepest corners of the Tower, into the ashes of the World Boss, beneath the ground dug up by treasure hunters. Today they are called the Moltyx."',
   p_lore_2: 'Each Moltyx is a unique fragment of that original heart — only one copy of each can ever exist per player, and each carries its own powerful, permanent ability. Unlike ordinary Compendium items, a Moltyx is never replaced: once found, it\'s yours forever.',
@@ -368,7 +368,7 @@ const TERMS_CONTENT_FR = `
   <p>Aucune inscription par e-mail ou mot de passe n'est requise. Ta progression est associée à un identifiant technique généré automatiquement sur ton appareil, récupérable via un <strong>code de récupération</strong> personnel que tu dois conserver toi-même. La perte de ce code peut entraîner la perte définitive de ta progression — le jeu ne peut pas la retrouver à ta place.</p>
 
   <h3>3. Contenu du jeu et monnaies virtuelles</h3>
-  <p>Les Moltcoins 🪙, objets, Moltyx et autres éléments obtenus en jeu n'ont <strong>aucune valeur monétaire réelle</strong>, ne sont ni échangeables ni remboursables, et n'existent que dans le cadre du jeu. Le jeu reste gratuit à l'accès et à la progression. Un achat réel optionnel est proposé : le déblocage de la voie Premium du Pass Saisonnier (2,99 €, paiement unique, taxes comprises), traité par notre prestataire de paiement Stripe. Cet achat donne accès à des récompenses supplémentaires du Pass Saisonnier ; il n'est jamais nécessaire pour jouer ou progresser dans le jeu de base. Voir les Conditions Générales de Vente ci-dessous pour le détail de cet achat (prix, paiement, livraison, droit de rétractation).</p>
+  <p>Les Moltcoins 🪙, objets, Moltyx et autres éléments obtenus en jeu n'ont <strong>aucune valeur monétaire réelle</strong>, ne sont ni échangeables ni remboursables, et n'existent que dans le cadre du jeu. Le jeu reste gratuit à l'accès et à la progression. Un achat réel optionnel est proposé : le déblocage de la voie Premium du Pass Saisonnier (5,99 €, paiement unique, taxes comprises), traité par notre prestataire de paiement Stripe. Cet achat donne accès à des récompenses supplémentaires du Pass Saisonnier ; il n'est jamais nécessaire pour jouer ou progresser dans le jeu de base. Voir les Conditions Générales de Vente ci-dessous pour le détail de cet achat (prix, paiement, livraison, droit de rétractation).</p>
 
   <h3>4. Publicité</h3>
   <p>Certaines fonctionnalités (comme les Coffres quotidiens) sont financées par des publicités tierces (réseau Monetag). En les utilisant, tu acceptes l'affichage de ces publicités, régies par les politiques de confidentialité de ces prestataires tiers.</p>
@@ -401,7 +401,7 @@ const TERMS_CONTENT_FR = `
   <p>Les présentes conditions régissent l'achat, en euros, du déblocage de la voie Premium du Pass Saisonnier au sein du jeu Moltchi. Elles complètent les Conditions Générales d'Utilisation ci-dessus et s'appliquent spécifiquement à cet achat réel.</p>
 
   <h3>2. Prix</h3>
-  <p>Le prix affiché (2,99 €) est le montant total et définitif payé, toutes taxes comprises, quel que soit le pays de résidence de l'acheteur. Aucun frais supplémentaire ne sera demandé après le paiement pour ce même déblocage.</p>
+  <p>Le prix affiché (5,99 €) est le montant total et définitif payé, toutes taxes comprises, quel que soit le pays de résidence de l'acheteur. Aucun frais supplémentaire ne sera demandé après le paiement pour ce même déblocage.</p>
 
   <h3>3. Modalités de paiement</h3>
   <p>Le paiement est traité par notre prestataire tiers <strong>Stripe</strong>, qui gère de façon sécurisée les informations de carte bancaire — ces informations ne sont à aucun moment transmises ou stockées par Moltchi. Le paiement est exigible immédiatement à la validation de la commande.</p>
@@ -433,7 +433,7 @@ const TERMS_CONTENT_EN = `
   <p>No email or password registration is required. Your progress is tied to a technical identifier automatically generated on your device, recoverable via a personal <strong>recovery code</strong> that you must keep yourself. Losing this code may result in permanent loss of your progress — the game cannot retrieve it on your behalf.</p>
 
   <h3>3. Game content and virtual currencies</h3>
-  <p>Moltcoins 🪙, items, Moltyx, and other in-game elements have <strong>no real monetary value</strong>, are not exchangeable or refundable, and only exist within the game. The game remains free to access and play. An optional real-money purchase is available: unlocking the Season Pass Premium track (2.99 €, one-time payment, tax included), processed by our payment provider Stripe. This purchase grants access to additional Season Pass rewards; it is never required to play or progress in the base game. See the Terms of Sale below for details on this purchase (price, payment, delivery, right of withdrawal).</p>
+  <p>Moltcoins 🪙, items, Moltyx, and other in-game elements have <strong>no real monetary value</strong>, are not exchangeable or refundable, and only exist within the game. The game remains free to access and play. An optional real-money purchase is available: unlocking the Season Pass Premium track (5.99 €, one-time payment, tax included), processed by our payment provider Stripe. This purchase grants access to additional Season Pass rewards; it is never required to play or progress in the base game. See the Terms of Sale below for details on this purchase (price, payment, delivery, right of withdrawal).</p>
 
   <h3>4. Advertising</h3>
   <p>Some features (such as daily Chests) are funded by third-party advertising (Monetag network). By using them, you accept the display of these ads, governed by the privacy policies of these third-party providers.</p>
@@ -466,7 +466,7 @@ const TERMS_CONTENT_EN = `
   <p>These terms govern the purchase, in euros, of the Season Pass Premium track unlock within the Moltchi game. They supplement the Terms of Service above and apply specifically to this real-money purchase.</p>
 
   <h3>2. Price</h3>
-  <p>The displayed price (2.99 €) is the total and final amount paid, tax included, regardless of the buyer's country of residence. No additional fee will be requested after payment for this same unlock.</p>
+  <p>The displayed price (5.99 €) is the total and final amount paid, tax included, regardless of the buyer's country of residence. No additional fee will be requested after payment for this same unlock.</p>
 
   <h3>3. Payment terms</h3>
   <p>Payment is processed by our third-party provider <strong>Stripe</strong>, which securely handles card information — this information is never transmitted to or stored by Moltchi. Payment is due immediately upon order confirmation.</p>
@@ -1559,7 +1559,7 @@ function renderBattlepass(c){
     actions.innerHTML = `<span style="color:#4ea88a;font-family:var(--font-mono);font-size:12px;">✓ ${currentLang==='en'?'Unlocked':'Débloqué'}</span>`;
   } else {
     $('bp-premium-sub').textContent = '';
-    actions.innerHTML = `<button id="btn-bp-buy-money">💳 ${currentLang==='en'?'Unlock for':'Débloquer pour'} 2,99 €</button>`;
+    actions.innerHTML = `<button id="btn-bp-buy-money">💳 ${currentLang==='en'?'Unlock for':'Débloquer pour'} 5,99 €</button>`;
     $('btn-bp-buy-money').onclick = async () => {
       const btn = $('btn-bp-buy-money');
       btn.disabled = true;
@@ -1567,7 +1567,7 @@ function renderBattlepass(c){
         const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
-          body: JSON.stringify({ scope: _getPlayerScope() })
+          body: JSON.stringify({ scope: _getPlayerScope(), product: 'battlepass' })
         });
         const data = await res.json();
         if(!res.ok || !data.url){ btn.disabled = false; return; }
@@ -2677,7 +2677,78 @@ function renderShopPanel(c){
       }
     };
   });
+
+  renderMysteryChestPanel(c);
 }
+
+const MYSTERY_CHEST_COST = 300; // doit rester synchronisé avec MYSTERY_CHEST_COST côté perform-action.ts
+const MYSTERY_CHEST_FREE_DAILY = 2; // doit rester synchronisé avec MYSTERY_CHEST_FREE_DAILY côté perform-action.ts
+
+function renderMysteryChestPanel(c){
+  const unlimitedToday = c.mysteryChestUnlimitedDay === todayKey();
+  const openedToday = c.mysteryChestDay === todayKey() ? (c.mysteryChestOpened || 0) : 0;
+  const remaining = Math.max(0, MYSTERY_CHEST_FREE_DAILY - openedToday);
+  const canAfford = (c.moltcoins || 0) >= MYSTERY_CHEST_COST;
+
+  const statusEl = $('mystery-chest-status');
+  if(unlimitedToday){
+    statusEl.textContent = currentLang==='en' ? 'Unlimited today ✦' : 'Illimité aujourd\'hui ✦';
+  } else {
+    statusEl.textContent = currentLang==='en'
+      ? `${remaining}/${MYSTERY_CHEST_FREE_DAILY} opening${remaining>1?'s':''} left today`
+      : `${remaining}/${MYSTERY_CHEST_FREE_DAILY} ouverture${remaining>1?'s':''} restante${remaining>1?'s':''} aujourd'hui`;
+  }
+  const buyBtn = $('btn-buy-mystery-chest');
+  buyBtn.disabled = !canAfford || (!unlimitedToday && remaining <= 0);
+
+  const unlimitedBtn = $('btn-unlock-mystery-unlimited');
+  if(unlimitedToday){
+    unlimitedBtn.disabled = true;
+    unlimitedBtn.textContent = currentLang==='en' ? '✦ Unlimited active' : '✦ Illimité actif';
+  } else {
+    unlimitedBtn.disabled = false;
+    unlimitedBtn.textContent = currentLang==='en' ? "✦ Unlimited today — €0.99" : "✦ Illimité aujourd'hui — 0,99€";
+  }
+}
+
+$('btn-buy-mystery-chest').onclick = async () => {
+  const btn = $('btn-buy-mystery-chest');
+  btn.disabled = true;
+  try{
+    const data = await performAction('mystery_chest_buy', {});
+    creature = mergeDefaults(data.creature);
+    renderCreature(creature);
+    const logEl = $('mystery-chest-log');
+    const parts = [`+${data.coins} 🪙`];
+    if(data.candy) parts.push(currentLang==='en' ? `+1 ${data.candy.name}` : `+1 ${data.candy.name}`);
+    (data.items||[]).forEach(it => parts.push(`${itemDisplayName(it)} (${RARITY_LABEL[it.rarity]})`));
+    if(data.uniqueFound) parts.push(`✦ ${data.uniqueFound.name} !`);
+    const line = document.createElement('div');
+    if(data.uniqueFound || (data.items && data.items.length)) line.className = 'good';
+    line.textContent = parts.join(' · ');
+    logEl.prepend(line);
+    while(logEl.children.length > 10) logEl.removeChild(logEl.lastChild);
+  } catch(e){
+    console.error(e);
+  } finally {
+    renderMysteryChestPanel(creature);
+  }
+};
+
+$('btn-unlock-mystery-unlimited').onclick = async () => {
+  const btn = $('btn-unlock-mystery-unlimited');
+  btn.disabled = true;
+  try{
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify({ scope: _getPlayerScope(), product: 'mystery_chest' })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.url){ btn.disabled = false; return; }
+    window.location.href = data.url; // redirige vers la page de paiement Stripe
+  } catch(e){ console.error(e); btn.disabled = false; }
+};
 
 // ============================================================
 // ============ COFFRES QUOTIDIENS (récompense pub) ============
@@ -4159,6 +4230,7 @@ async function handleStripeReturn(){
   const params = new URLSearchParams(window.location.search);
   const status = params.get('stripe');
   if(!status) return;
+  const product = params.get('product') === 'mystery_chest' ? 'mystery_chest' : 'battlepass'; // repli historique
   // Nettoie l'URL tout de suite pour éviter un retraitement si le joueur recharge la page
   window.history.replaceState({}, '', window.location.pathname);
 
@@ -4168,10 +4240,14 @@ async function handleStripeReturn(){
   }
   if(status !== 'success') return;
 
+  const isUnlocked = () => product === 'mystery_chest'
+    ? creature.mysteryChestUnlimitedDay === todayKey()
+    : !!(creature.battlepass && creature.battlepass.premiumUnlocked);
+
   // Le webhook Stripe est quasi instantané mais pas garanti avant cette redirection ;
   // on retente la synchronisation quelques secondes si le déblocage n'est pas encore là.
   for(let i=0; i<6; i++){
-    if(creature.battlepass && creature.battlepass.premiumUnlocked) break;
+    if(isUnlocked()) break;
     await new Promise(r => setTimeout(r, 1500));
     try{
       const data = await performAction('sync', {});
@@ -4179,8 +4255,11 @@ async function handleStripeReturn(){
     } catch(e){ console.error(e); }
   }
   renderCreature(creature);
-  if(creature.battlepass && creature.battlepass.premiumUnlocked){
-    log(currentLang==='en' ? 'Payment confirmed — Premium track unlocked!' : 'Paiement confirmé — voie Premium débloquée !', 'good');
+  if(isUnlocked()){
+    const msg = product === 'mystery_chest'
+      ? (currentLang==='en' ? 'Payment confirmed — unlimited Mystery Chest today!' : 'Paiement confirmé — Coffre Mystère illimité aujourd\'hui !')
+      : (currentLang==='en' ? 'Payment confirmed — Premium track unlocked!' : 'Paiement confirmé — voie Premium débloquée !');
+    log(msg, 'good');
   } else {
     log(currentLang==='en'
       ? 'Payment received — it may take a little longer to unlock. Reload the page in a moment.'
