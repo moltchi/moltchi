@@ -244,7 +244,7 @@ const I18N_EN = {
   h2_mystery_chest: '🎁 Mystery Chest',
   p_mystery_chest_desc: "Guaranteed Moltcoins + a chance of candy, gear (up to legendary, drawn from your furthest unlocked dungeon), and even the Shard of the Negotiator — an exclusive Moltyx found nowhere else.",
   btn_mystery_chest_buy: '🎁 Open — 🪙 300 Moltcoins',
-  btn_mystery_unlimited_buy: '✦ Unlimited today — €0.99',
+  btn_mystery_unlimited_buy: '💳 Paid chest — €0.99',
   p_treasure_intro: 'Spend <strong>action points</strong> to dig and collect <strong>Moltcoins</strong> 🪙, Moltchi\'s currency. Very rare digs can also reveal a Compendium item.',
   p_lore_1: '"Before the Moltchi hatched, before even the Wyrm Tower, the world was but a single heart of moss, ivory and amber. When that heart shattered, its shards scattered — into the deepest corners of the Tower, into the ashes of the World Boss, beneath the ground dug up by treasure hunters. Today they are called the Moltyx."',
   p_lore_2: 'Each Moltyx is a unique fragment of that original heart — only one copy of each can ever exist per player, and each carries its own powerful, permanent ability. Unlike ordinary Compendium items, a Moltyx is never replaced: once found, it\'s yours forever.',
@@ -2685,30 +2685,49 @@ const MYSTERY_CHEST_COST = 300; // doit rester synchronisé avec MYSTERY_CHEST_C
 const MYSTERY_CHEST_FREE_DAILY = 2; // doit rester synchronisé avec MYSTERY_CHEST_FREE_DAILY côté perform-action.ts
 
 function renderMysteryChestPanel(c){
-  const unlimitedToday = c.mysteryChestUnlimitedDay === todayKey();
   const openedToday = c.mysteryChestDay === todayKey() ? (c.mysteryChestOpened || 0) : 0;
   const remaining = Math.max(0, MYSTERY_CHEST_FREE_DAILY - openedToday);
+  const pendingPaid = c.mysteryChestPendingPaid || 0;
   const canAfford = (c.moltcoins || 0) >= MYSTERY_CHEST_COST;
 
   const statusEl = $('mystery-chest-status');
-  if(unlimitedToday){
-    statusEl.textContent = currentLang==='en' ? 'Unlimited today ✦' : 'Illimité aujourd\'hui ✦';
+  if(pendingPaid > 0){
+    statusEl.textContent = currentLang==='en'
+      ? `${pendingPaid} paid opening${pendingPaid>1?'s':''} ready to claim!`
+      : `${pendingPaid} ouverture${pendingPaid>1?'s':''} payée${pendingPaid>1?'s':''} prête${pendingPaid>1?'s':''} à réclamer !`;
   } else {
     statusEl.textContent = currentLang==='en'
-      ? `${remaining}/${MYSTERY_CHEST_FREE_DAILY} opening${remaining>1?'s':''} left today`
-      : `${remaining}/${MYSTERY_CHEST_FREE_DAILY} ouverture${remaining>1?'s':''} restante${remaining>1?'s':''} aujourd'hui`;
+      ? `${remaining}/${MYSTERY_CHEST_FREE_DAILY} openings left in Moltcoins today`
+      : `${remaining}/${MYSTERY_CHEST_FREE_DAILY} ouvertures restantes en Moltcoins aujourd'hui`;
   }
   const buyBtn = $('btn-buy-mystery-chest');
-  buyBtn.disabled = !canAfford || (!unlimitedToday && remaining <= 0);
+  // Un crédit payé en attente rend le bouton "Ouvrir" utilisable même si le plafond gratuit
+  // du jour est atteint — perform-action.ts consomme ce crédit en priorité, voir la
+  // conversation.
+  buyBtn.disabled = pendingPaid <= 0 && (!canAfford || remaining <= 0);
 
+  // Bouton d'achat réel : PAS d'état "illimité actif" ici — chaque paiement n'ouvre qu'UN
+  // seul coffre (voir la conversation), donc toujours le même libellé, jamais désactivé
+  // durablement.
   const unlimitedBtn = $('btn-unlock-mystery-unlimited');
-  if(unlimitedToday){
-    unlimitedBtn.disabled = true;
-    unlimitedBtn.textContent = currentLang==='en' ? '✦ Unlimited active' : '✦ Illimité actif';
-  } else {
-    unlimitedBtn.disabled = false;
-    unlimitedBtn.textContent = currentLang==='en' ? "✦ Unlimited today — €0.99" : "✦ Illimité aujourd'hui — 0,99€";
-  }
+  unlimitedBtn.disabled = false;
+  unlimitedBtn.textContent = currentLang==='en' ? '💳 Paid chest — €0.99' : '💳 Coffre payant — 0,99€';
+}
+
+/** Affiche le résultat d'une ouverture de Coffre Mystère dans son log — factorisé pour être
+ * appelé aussi bien depuis le clic manuel que depuis la réclamation automatique au retour
+ * de paiement Stripe (voir handleStripeReturn()). */
+function logMysteryChestResult(data){
+  const logEl = $('mystery-chest-log');
+  const parts = [`+${data.coins} 🪙`];
+  if(data.candy) parts.push(`+1 ${data.candy.name}`);
+  (data.items||[]).forEach(it => parts.push(`${itemDisplayName(it)} (${RARITY_LABEL[it.rarity]})`));
+  if(data.uniqueFound) parts.push(`✦ ${data.uniqueFound.name} !`);
+  const line = document.createElement('div');
+  if(data.uniqueFound || (data.items && data.items.length)) line.className = 'good';
+  line.textContent = parts.join(' · ');
+  logEl.prepend(line);
+  while(logEl.children.length > 10) logEl.removeChild(logEl.lastChild);
 }
 
 $('btn-buy-mystery-chest').onclick = async () => {
@@ -2718,16 +2737,7 @@ $('btn-buy-mystery-chest').onclick = async () => {
     const data = await performAction('mystery_chest_buy', {});
     creature = mergeDefaults(data.creature);
     renderCreature(creature);
-    const logEl = $('mystery-chest-log');
-    const parts = [`+${data.coins} 🪙`];
-    if(data.candy) parts.push(currentLang==='en' ? `+1 ${data.candy.name}` : `+1 ${data.candy.name}`);
-    (data.items||[]).forEach(it => parts.push(`${itemDisplayName(it)} (${RARITY_LABEL[it.rarity]})`));
-    if(data.uniqueFound) parts.push(`✦ ${data.uniqueFound.name} !`);
-    const line = document.createElement('div');
-    if(data.uniqueFound || (data.items && data.items.length)) line.className = 'good';
-    line.textContent = parts.join(' · ');
-    logEl.prepend(line);
-    while(logEl.children.length > 10) logEl.removeChild(logEl.lastChild);
+    logMysteryChestResult(data);
   } catch(e){
     console.error(e);
   } finally {
@@ -4240,14 +4250,40 @@ async function handleStripeReturn(){
   }
   if(status !== 'success') return;
 
-  const isUnlocked = () => product === 'mystery_chest'
-    ? creature.mysteryChestUnlimitedDay === todayKey()
-    : !!(creature.battlepass && creature.battlepass.premiumUnlocked);
+  if(product === 'mystery_chest'){
+    // Le webhook Stripe est quasi instantané mais pas garanti avant cette redirection ; on
+    // retente la synchronisation quelques secondes jusqu'à voir le crédit payé apparaître,
+    // puis on le RÉCLAME AUTOMATIQUEMENT (paiement = coffre reçu, pas de clic en plus à
+    // faire — voir la conversation).
+    let gotCredit = (creature.mysteryChestPendingPaid || 0) > 0;
+    for(let i=0; i<6 && !gotCredit; i++){
+      await new Promise(r => setTimeout(r, 1500));
+      try{
+        const data = await performAction('sync', {});
+        creature = mergeDefaults(data.creature);
+        gotCredit = (creature.mysteryChestPendingPaid || 0) > 0;
+      } catch(e){ console.error(e); }
+    }
+    if(gotCredit){
+      try{
+        const data = await performAction('mystery_chest_buy', {});
+        creature = mergeDefaults(data.creature);
+        renderCreature(creature);
+        logMysteryChestResult(data);
+        log(currentLang==='en' ? 'Payment confirmed — Mystery Chest opened!' : 'Paiement confirmé — Coffre Mystère ouvert !', 'good');
+      } catch(e){ console.error(e); }
+    } else {
+      renderCreature(creature);
+      log(currentLang==='en'
+        ? 'Payment received — it may take a little longer to unlock. Reload the page in a moment.'
+        : 'Paiement bien reçu — le déblocage peut prendre un peu plus de temps. Recharge la page dans un instant.', 'hit');
+    }
+    return;
+  }
 
-  // Le webhook Stripe est quasi instantané mais pas garanti avant cette redirection ;
-  // on retente la synchronisation quelques secondes si le déblocage n'est pas encore là.
+  // ---------- Pass Saisonnier (inchangé) ----------
   for(let i=0; i<6; i++){
-    if(isUnlocked()) break;
+    if(creature.battlepass && creature.battlepass.premiumUnlocked) break;
     await new Promise(r => setTimeout(r, 1500));
     try{
       const data = await performAction('sync', {});
@@ -4255,11 +4291,8 @@ async function handleStripeReturn(){
     } catch(e){ console.error(e); }
   }
   renderCreature(creature);
-  if(isUnlocked()){
-    const msg = product === 'mystery_chest'
-      ? (currentLang==='en' ? 'Payment confirmed — unlimited Mystery Chest today!' : 'Paiement confirmé — Coffre Mystère illimité aujourd\'hui !')
-      : (currentLang==='en' ? 'Payment confirmed — Premium track unlocked!' : 'Paiement confirmé — voie Premium débloquée !');
-    log(msg, 'good');
+  if(creature.battlepass && creature.battlepass.premiumUnlocked){
+    log(currentLang==='en' ? 'Payment confirmed — Premium track unlocked!' : 'Paiement confirmé — voie Premium débloquée !', 'good');
   } else {
     log(currentLang==='en'
       ? 'Payment received — it may take a little longer to unlock. Reload the page in a moment.'
