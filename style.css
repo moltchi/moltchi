@@ -431,11 +431,15 @@
     opacity:0.85;cursor:pointer;}
   .footnote-link:hover{color:var(--gold);background:none;}
   .music-volume-slider{width:70px;transform:rotate(-90deg);accent-color:var(--gold);cursor:pointer;}
+  #music-volume-wrap{width:34px;height:86px;}
   @media (max-width:640px){
     /* Horizontal (gauche→droite) sur mobile plutôt que vertical — plus naturel à manipuler
        au doigt qu'un curseur pivoté, voir la conversation. transform:none retrouve
-       l'orientation native d'un <input type="range">. */
+       l'orientation native d'un <input type="range">. Le CONTENEUR doit suivre le même
+       changement de sens (largeur/hauteur inversées), sinon le curseur maintenant
+       horizontal déborde d'une pilule restée étroite et verticale — c'était le vrai bug. */
     .music-volume-slider{transform:none;width:90px;}
+    #music-volume-wrap{width:110px;height:34px;}
   }
   @media (max-width:640px){
     .footnote{padding-bottom:22px;}
