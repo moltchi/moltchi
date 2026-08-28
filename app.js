@@ -255,6 +255,8 @@ const I18N_EN = {
   footer_rights: 'All rights reserved.',
   footer_terms: 'Terms of Service & Sale',
   streak_title: 'Daily Login Bonus',
+  unlock_modal_title: '🔓 New unlocked!',
+  unlock_modal_cta: 'Got it!',
   welcome_p1: 'Your Moltchi needs you: feed it, play with it, and let it rest — it all happens in the <strong>My Creature</strong> tab.',
   welcome_p2: 'To make it stronger, try the mini-games in the <strong>Training</strong> tab.',
   welcome_p3: "Dungeons, the World Boss, the shop and more await — at your own pace, whenever you're ready.",
@@ -935,10 +937,21 @@ function updateTabAccess(c){
 
     const wasLocked = tab.classList.contains('locked');
     tab.classList.toggle('locked', locked);
+    // Masqué complètement, pas juste grisé/désactivé — un onglet qu'on ne peut pas encore
+    // utiliser n'a pas besoin d'être visible du tout (voir la conversation).
+    tab.style.display = locked ? 'none' : '';
     if(!locked){
       if(_tabAccessInitialized && wasLocked && cfg && !_notifiedUnlockedTabs.has(key)) newlyUnlocked.push(key);
       _notifiedUnlockedTabs.add(key); // marqué "vu" dans tous les cas — jamais de notif rétroactive
     }
+  });
+  // Un groupe déroulant (.tab-group) dont TOUS les enfants sont masqués doit lui-même être
+  // masqué — sinon son bouton parent ("Récompenses ▾" par exemple) reste cliquable pour
+  // ouvrir un menu vide, ce qui arrive au tout début : Pass Saisonnier/Succès/Coffres/
+  // Boutique sont tous verrouillés en même temps dans ce groupe précis.
+  document.querySelectorAll('.tab-group').forEach(group=>{
+    const anyVisible = Array.from(group.querySelectorAll('.tab')).some(t => t.style.display !== 'none');
+    group.style.display = anyVisible ? '' : 'none';
   });
   const activeTab = document.querySelector('.tab.active');
   if(activeTab && activeTab.classList.contains('locked')){
@@ -950,29 +963,27 @@ function updateTabAccess(c){
     playFxEffectSafe(Bridge => Bridge.reclaimCreatureStage());
   }
   _tabAccessInitialized = true;
-  if(newlyUnlocked.length) showUnlockToasts(newlyUnlocked);
+  if(newlyUnlocked.length) showUnlockModal(newlyUnlocked);
 }
 
 /** Toast de déblocage d'onglet — même style/pattern que showAchievementToasts() (voir plus
  * bas), avec en plus une courte description de ce que le mode propose. */
-function showUnlockToasts(keys){
-  const wrap = $('ach-toast-wrap');
-  if(!wrap) return;
-  keys.forEach((key, idx) => {
+function showUnlockModal(keys){
+  const overlay = $('unlock-modal-overlay');
+  const list = $('unlock-modal-list');
+  if(!overlay || !list) return;
+  list.innerHTML = keys.map(key => {
     const cfg = UNLOCK_TAB_CONFIG[key];
-    if(!cfg) return;
-    setTimeout(() => {
-      const toast = document.createElement('div');
-      toast.className = 'ach-toast';
-      const name = currentLang==='en' ? cfg.name_en : cfg.name;
-      const desc = currentLang==='en' ? cfg.desc_en : cfg.desc;
-      const title = currentLang==='en' ? 'New tab unlocked' : 'Nouvel onglet débloqué';
-      toast.innerHTML = `<span class="ach-icon">${cfg.icon}</span><span><div class="ach-toast-title">🔓 ${title}</div><div class="ach-toast-name">${name}</div><div class="ach-toast-desc">${desc}</div></span>`;
-      wrap.appendChild(toast);
-      setTimeout(() => toast.remove(), 5100);
-    }, idx * 400);
-  });
+    if(!cfg) return '';
+    const name = currentLang==='en' ? cfg.name_en : cfg.name;
+    const desc = currentLang==='en' ? cfg.desc_en : cfg.desc;
+    return `<div class="unlock-item"><span class="unlock-item-icon">${cfg.icon}</span><span><div class="unlock-item-name">${name}</div><div class="unlock-item-desc">${desc}</div></span></div>`;
+  }).join('');
+  overlay.style.display = 'flex';
 }
+$('btn-close-unlock').onclick = () => { $('unlock-modal-overlay').style.display = 'none'; };
+$('btn-close-unlock-2').onclick = () => { $('unlock-modal-overlay').style.display = 'none'; };
+$('unlock-modal-overlay').onclick = (e) => { if(e.target.id === 'unlock-modal-overlay') $('unlock-modal-overlay').style.display = 'none'; };
 
 async function getUsername(){
   try{ const r = await window.storage.get('username', false); return r.value; }

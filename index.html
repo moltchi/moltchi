@@ -755,6 +755,22 @@
     </div>
   </div>
 
+  <!-- Modal de déblocage : réutilise le style du modal de bienvenue, contenu injecté par
+       showUnlockModal() dans app.js. Liste tous les onglets qui viennent de se débloquer
+       EN UNE SEULE fenêtre (plutôt qu'une par onglet) — plusieurs peuvent se débloquer au
+       même palier (ex. Pass Saisonnier + Succès + Coffres + Boutique ensemble), une série de
+       pop-ups à la chaîne serait pénible à fermer un par un. -->
+  <div id="unlock-modal-overlay" class="terms-modal-overlay" style="display:none;">
+    <div class="terms-modal">
+      <button id="btn-close-unlock" class="terms-modal-close">✕</button>
+      <div class="terms-modal-content" style="text-align:center;">
+        <h2 data-i18n="unlock_modal_title">🔓 Nouveau débloqué !</h2>
+        <div id="unlock-modal-list" style="margin-top:14px;text-align:left;"></div>
+        <button id="btn-close-unlock-2" class="primary streak-claim-btn" data-i18n="unlock_modal_cta" style="margin-top:10px;">C'est noté !</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CHAT BUBBLE (widget flottant, toujours accessible une fois connecté) -->
   <div id="chat-bubble-window" class="chat-bubble-window">
     <div class="chat-bubble-tail"></div>
