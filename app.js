@@ -3594,12 +3594,13 @@ async function handleTowerClimbClick(){
       pushDungeonFightLog(msg);
     }
     playFxEffectSafe(Bridge => Bridge.playDungeonEffect('dungeon-fx-stage', { won: !!data.win }));
-    renderCreature(creature);
+    towerClimbInFlight = false;
+    renderCreature(creature); // couvre déjà renderDungeonPanel() via sa cascade — pas de rendu supplémentaire nécessaire ici
+    return;
   } catch(e){
     pushDungeonFightLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'); console.error(e);
-  } finally {
     towerClimbInFlight = false;
-    renderDungeonPanel(creature);
+    renderDungeonPanel(creature); // nécessaire ici seulement : renderCreature() n'a pas été appelé sur ce chemin
   }
 }
 
@@ -3735,10 +3736,11 @@ async function handleCorruptClimbClick(){
       pushCorruptFightLog(msg);
     }
     playFxEffectSafe(Bridge => Bridge.playDungeonEffect('corrupt-fx-stage', { won: !!data.win }));
-    renderCreature(creature);
+    corruptClimbInFlight = false;
+    renderCreature(creature); // couvre déjà renderCorruptPanel() via sa cascade
+    return;
   } catch(e){
     pushCorruptFightLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'); console.error(e);
-  } finally {
     corruptClimbInFlight = false;
     renderCorruptPanel(creature);
   }
@@ -3892,10 +3894,11 @@ async function handleNoyauClimbClick(){
       pushNoyauFightLog(msg);
     }
     playFxEffectSafe(Bridge => Bridge.playDungeonEffect('noyau-fx-stage', { won: !!data.win }));
-    renderCreature(creature);
+    noyauClimbInFlight = false;
+    renderCreature(creature); // couvre déjà renderNoyauPanel() via sa cascade
+    return;
   } catch(e){
     pushNoyauFightLog(currentLang==='en' ? 'Error — try again later.' : 'Erreur — réessaie plus tard.'); console.error(e);
-  } finally {
     noyauClimbInFlight = false;
     renderNoyauPanel(creature);
   }
@@ -3995,17 +3998,19 @@ async function handleTreasureDigClick(){
   if(treasureDigInFlight) return;
   if(creature.treasureAP <= 0) return;
   treasureDigInFlight = true;
-  renderTreasurePanel(creature);
+  renderTreasurePanel(creature); // désactive visuellement le bouton pendant la requête
   try{
     const data = await performAction('treasure_dig', {});
     creature = mergeDefaults(data.creature);
     const lastDig = (creature.treasureHistory || []).slice(-1)[0];
     playFxEffectSafe(Bridge => Bridge.playTreasureEffect({ itemFound: !!(lastDig && lastDig.itemName) }));
-    renderCreature(creature);
-  } catch(e){ console.error(e); }
-  finally {
     treasureDigInFlight = false;
-    renderTreasurePanel(creature);
+    renderCreature(creature); // couvre déjà renderTreasurePanel() via sa cascade — pas de rendu supplémentaire nécessaire ici
+    return;
+  } catch(e){
+    console.error(e);
+    treasureDigInFlight = false;
+    renderTreasurePanel(creature); // nécessaire ici seulement : renderCreature() n'a pas été appelé sur ce chemin
   }
 }
 
