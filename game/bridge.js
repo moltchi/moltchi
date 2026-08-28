@@ -211,6 +211,11 @@ function _moveCanvasTo(containerId){
     const dungeonScene = _game.scene.getScene('DungeonScene');
     if(dungeonScene && typeof dungeonScene.stopDungeonHUD === 'function') dungeonScene.stopDungeonHUD();
   }
+  if(containerId !== 'treasure-fx-stage'){
+    // Même raison d'être, pour le HUD complet de la Chasse aux trésors (voir TreasureScene.js).
+    const treasureScene = _game.scene.getScene('TreasureScene');
+    if(treasureScene && typeof treasureScene.stopTreasureHUD === 'function') treasureScene.stopTreasureHUD();
+  }
   container.appendChild(_game.canvas);
   _game.scale.resize(container.clientWidth || 300, container.clientHeight || 300);
   return true;
@@ -547,6 +552,32 @@ function preloadDungeonAssets(dungeonKey){
   ]).then(() => true);
 }
 
+/**
+ * Affiche/actualise le HUD complet de la Chasse aux trésors (décor, Moltcoins, points
+ * d'action, bouton Fouiller interactif, panneau récompense+log) — voir
+ * TreasureScene.showTreasureHUD(). Le clic sur le bouton appelle data.onDig fourni par
+ * app.js. Ne touche pas à l'effet coffre+pièces (playDig) — à appeler séparément via
+ * playTreasureEffect(result).
+ * @param {object} data - voir la JSDoc de TreasureScene.showTreasureHUD() pour la forme exacte.
+ * @returns {boolean}
+ */
+function showTreasureHUD(data){
+  if(!_ready || !_game || !data) return false;
+  const scene = _game.scene.getScene('TreasureScene');
+  if(!scene || typeof scene.showTreasureHUD !== 'function') return false;
+  if(!_moveCanvasTo('treasure-fx-stage')) return false;
+  scene.showTreasureHUD(data);
+  return true;
+}
+
+/** Précharge en tâche de fond les assets fixes de la Chasse aux trésors. */
+function preloadTreasureAssets(){
+  if(!_ready || !_game) return Promise.resolve(false);
+  const scene = _game.scene.getScene('TreasureScene');
+  if(!scene || typeof scene.preloadTreasureAssets !== 'function') return Promise.resolve(false);
+  return scene.preloadTreasureAssets().then(() => true);
+}
+
 export const Bridge = {
   isReady, ensureLoaded, playCareAnimation,
   startReflexGame, startMemoryGame, startRhythmGame, startArcaneGame,
@@ -555,4 +586,5 @@ export const Bridge = {
   showBossIdle, showBossAttacked, preloadBossIdle, preloadBossAttacked, preloadBossSlash,
   showBossBattleUI, setBossHp, preloadBossBattleUIAssets, preloadBossArenaBg, reclaimCreatureStage,
   showDungeonHUD, preloadDungeonAssets,
+  showTreasureHUD, preloadTreasureAssets,
 };
