@@ -683,19 +683,24 @@
   <!-- TREASURE HUNT PANEL -->
   <div class="panel" id="panel-treasure">
     <div class="card">
-      <h2 data-i18n="h2_treasure_hunt">Chasse aux trésors</h2>
-      <p data-i18n="p_treasure_intro">Dépense des <strong>points d'action</strong> pour fouiller et récupérer des <strong>Moltcoins</strong> 🪙, la monnaie de Moltchi. De très rares fouilles peuvent aussi révéler un objet du Recueil.</p>
-      <div class="floor-display"><div class="floor-num" id="moltcoin-balance" style="color:var(--gold);">0</div><div class="floor-label" data-i18n="lbl_moltcoins">Moltcoins 🪙</div></div>
-      <div class="attempts-left" data-i18n="lbl_action_points" style="text-align:center;margin-top:14px;">Points d'action</div>
-      <div class="pip-row" id="treasure-pip-row" style="margin:8px 0;justify-content:center;"></div>
-      <div class="attempts-left" id="treasure-recharge-text" style="text-align:center;margin-bottom:12px;"></div>
-      <div id="treasure-fx-stage" class="fx-stage"></div>
-      <div class="attempts-row">
-        <div></div>
-        <button id="btn-dig" class="primary big" data-i18n="btn_dig">⛏️ Fouiller (1 PA)</button>
+      <h2 data-i18n="h2_treasure_hunt" style="display:none">Chasse aux trésors</h2>
+      <div id="treasure-fx-wrap" style="width:100%;aspect-ratio:1376/1119;position:relative;margin-bottom:10px;">
+        <div id="treasure-fx-stage" class="fx-stage dungeon-fx-stage"></div>
       </div>
-      <div class="log" id="treasure-log"></div>
-      <div class="attempts-left" data-i18n="p_treasure_history" style="margin-top:8px;">Les 10 dernières fouilles sont affichées et conservés.</div>
+      <div style="display:none">
+        <p data-i18n="p_treasure_intro">Dépense des <strong>points d'action</strong> pour fouiller et récupérer des <strong>Moltcoins</strong> 🪙, la monnaie de Moltchi. De très rares fouilles peuvent aussi révéler un objet du Recueil.</p>
+        <div class="treasure-reward-info" id="treasure-reward-info"></div>
+        <div class="floor-display"><div class="floor-num" id="moltcoin-balance" style="color:var(--gold);">0</div><div class="floor-label" data-i18n="lbl_moltcoins">Moltcoins 🪙</div></div>
+        <div class="attempts-left" data-i18n="lbl_action_points" style="text-align:center;margin-top:14px;">Points d'action</div>
+        <div class="pip-row" id="treasure-pip-row" style="margin:8px 0;justify-content:center;"></div>
+        <div class="attempts-left" id="treasure-recharge-text" style="text-align:center;margin-bottom:12px;"></div>
+        <div class="attempts-row">
+          <div></div>
+          <button id="btn-dig" class="primary big" data-i18n="btn_dig">⛏️ Fouiller (1 PA)</button>
+        </div>
+        <div class="log" id="treasure-log"></div>
+        <div class="attempts-left" data-i18n="p_treasure_history" style="margin-top:8px;">Les 10 dernières fouilles sont affichées et conservés.</div>
+      </div>
     </div>
   </div>
 

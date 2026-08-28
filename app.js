@@ -685,6 +685,8 @@ document.querySelectorAll('.tab').forEach(tab=>{
       renderDungeonPanel(creature);
       renderCorruptPanel(creature);
       renderNoyauPanel(creature);
+    } else if(tab.dataset.tab === 'treasure' && creature){
+      renderTreasurePanel(creature); // (re)construit le HUD Phaser maintenant que le panel est actif — même garde-fou que le Boss/les Donjons
     } else if(tab.dataset.tab === 'creature'){
       // Sans ça, le canvas partagé peut rester coincé sur boss-fx-stage/dungeon-fx-stage
       // après un aller-retour sur un autre onglet (display:none sur le panel inactif ne
@@ -749,6 +751,19 @@ if(typeof ResizeObserver !== 'undefined'){
       }, 150);
     });
     dungeonResizeTargets.forEach(t => dungeonRO.observe(t.el));
+  }
+
+  // Même principe pour le HUD de la Chasse aux trésors (un seul mode, pas de sélecteur
+  // multi-section comme les donjons).
+  const treasureFxWrap = $('treasure-fx-wrap');
+  if(treasureFxWrap){
+    let treasureResizeTimer = null;
+    new ResizeObserver(() => {
+      clearTimeout(treasureResizeTimer);
+      treasureResizeTimer = setTimeout(() => {
+        if(creature && $('panel-treasure') && $('panel-treasure').classList.contains('active')) renderTreasurePanel(creature);
+      }, 150);
+    }).observe(treasureFxWrap);
   }
 }
 
@@ -3461,7 +3476,11 @@ function makeDungeonContentHeightHandler(wrapId, rerender){
   return (neededPx) => {
     const wrap = $(wrapId);
     if(!wrap) return;
-    if(neededPx > wrap.clientHeight + 4){
+    // Symétrique (agrandit ET rétrécit) : neededPx représente la hauteur EXACTE nécessaire
+    // pour le contenu actuel, pas juste un minimum. Un seuil d'agrandissement seul laissait
+    // le conteneur bloqué à sa plus grande valeur atteinte, même une fois le texte redevenu
+    // court (ex. log vide vs récompense longue) — voir la conversation.
+    if(Math.abs(neededPx - wrap.clientHeight) > 4){
       wrap.style.aspectRatio = 'auto';
       wrap.style.height = neededPx + 'px';
       rerender();
@@ -3886,23 +3905,61 @@ function formatMinutes(ms){
   const h = Math.floor(totalMin/60), m = totalMin%60;
   return h > 0 ? `${h}h${m.toString().padStart(2,'0')}` : `${m}min`;
 }
+let treasureDigInFlight = false;
+
+/**
+ * Callback passé en onContentHeight à Bridge.showTreasureHUD() (voir TreasureScene.js) —
+ * même principe que makeDungeonContentHeightHandler(), voir cette dernière pour le détail.
+ */
+const treasureContentHeightHandler = makeDungeonContentHeightHandler('treasure-fx-wrap', () => renderTreasurePanel(creature));
+
 function renderTreasurePanel(c){
   if(c.stage === 0) return;
   regenTreasureAP(c);
   const cap = maxTreasureAP(c);
-  $('moltcoin-balance').textContent = c.moltcoins || 0;
-  const pipRow = $('treasure-pip-row'); pipRow.innerHTML = '';
-  for(let i=0;i<cap;i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < c.treasureAP ? 'available' : 'used'); pipRow.appendChild(pip); }
-  const rechargeEl = $('treasure-recharge-text');
+
+  const moltcoinsLabel = currentLang==='en' ? 'MOLTCOINS' : 'MOLTCOINS';
+  let apText;
   if(c.treasureAP >= cap){
-    rechargeEl.textContent = currentLang==='en' ? 'Action Points at maximum.' : "Points d'action au maximum.";
+    apText = currentLang==='en' ? 'Action Points at maximum.' : "Points d'action au maximum.";
   } else {
     const msUntilNext = TREASURE_AP_REGEN_MS - (Date.now() - c.treasureAPLastTick);
-    rechargeEl.textContent = currentLang==='en'
+    apText = currentLang==='en'
       ? `Next Action Point in ${formatMinutes(msUntilNext)} (1 per hour).`
       : `Prochain point d'action dans ${formatMinutes(msUntilNext)} (1 par heure).`;
   }
-  $('btn-dig').disabled = c.treasureAP <= 0;
+  const digDisabled = c.treasureAP <= 0 || treasureDigInFlight;
+  const digLabel = currentLang==='en' ? '⛏️ Dig (1 AP)' : '⛏️ Fouiller (1 PA)';
+
+  const rewardText = currentLang==='en'
+    ? 'Spend Action Points to dig and find Moltcoins. Very rare digs can also reveal a Codex item.'
+    : "Dépense des points d'action pour fouiller et récupérer des Moltcoins. De très rares fouilles peuvent aussi révéler un objet du Recueil.";
+  $('treasure-reward-info').textContent = rewardText; // gardé à jour même masqué, au cas où réactivé un jour
+
+  // Historique — reste calculé en HTML caché (au cas où) ET transmis au HUD Phaser sous
+  // forme de lignes de texte courtes.
+  const history = c.treasureHistory || [];
+  const recent = history.slice(-10);
+  const logLines = [];
+  const logEl = $('treasure-log');
+  logEl.innerHTML = '';
+  for(let i = recent.length - 1; i >= 0; i--){
+    const h = recent[i];
+    const dateStr = new Date(h.ts).toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+    let msg = `${dateStr} — +${h.coins} Moltcoins 🪙`;
+    if(h.itemName){ msg += ` — objet trouvé : ${h.itemName} (${RARITY_LABEL[h.itemRarity]})`; }
+    logLines.push(msg);
+    const div = document.createElement('div');
+    if(h.itemName) div.className = 'good';
+    div.textContent = msg;
+    logEl.appendChild(div);
+  }
+
+  $('moltcoin-balance').textContent = c.moltcoins || 0; // gardé à jour même masqué
+  const pipRow = $('treasure-pip-row'); pipRow.innerHTML = '';
+  for(let i=0;i<cap;i++){ const pip = document.createElement('div'); pip.className = 'pip ' + (i < c.treasureAP ? 'available' : 'used'); pipRow.appendChild(pip); }
+  $('treasure-recharge-text').textContent = apText;
+  $('btn-dig').disabled = digDisabled;
 
   // Pastille rouge sur l'onglet Chasse aux trésors : allumée tant qu'il reste au moins
   // un point d'action disponible (même logique que les Coffres/Récompenses).
@@ -3917,19 +3974,38 @@ function renderTreasurePanel(c){
   const playLabel = currentLang === 'en' ? (I18N_EN.tab_play || 'Play') : 'Jouer';
   $('play-parent').innerHTML = playLabel + ' <span class="caret">▾</span>' + (treasureHasAP ? dotHTML : '');
 
-  const logEl = $('treasure-log');
-  const history = c.treasureHistory || [];
-  logEl.innerHTML = '';
-  const recent = history.slice(-10);
-  for(let i = recent.length - 1; i >= 0; i--){
-    const h = recent[i];
-    const dateStr = new Date(h.ts).toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
-    let msg = `${dateStr} — +${h.coins} Moltcoins 🪙`;
-    if(h.itemName){ msg += ` — objet trouvé : ${h.itemName} (${RARITY_LABEL[h.itemRarity]})`; }
-    const div = document.createElement('div');
-    if(h.itemName) div.className = 'good';
-    div.textContent = msg;
-    logEl.appendChild(div);
+  // Même garde-fou que pour le Boss/les Donjons : ne pousse vers Phaser que si l'onglet
+  // Trésor est réellement affiché — renderTreasurePanel() est appelée à chaque
+  // renderCreature(), pas seulement à l'ouverture de l'onglet.
+  const treasurePanelActive = $('panel-treasure') && $('panel-treasure').classList.contains('active');
+  if(treasurePanelActive){
+    playFxEffectSafe(Bridge => Bridge.showTreasureHUD({
+      moltcoinsLabel, moltcoins: c.moltcoins || 0,
+      apText, apUsed: c.treasureAP === undefined ? 0 : cap - c.treasureAP, apMax: cap,
+      digLabel, digDisabled,
+      rewardText, log: logLines,
+      onDig: handleTreasureDigClick,
+      onContentHeight: treasureContentHeightHandler,
+    }));
+  }
+}
+
+/** Callback du bouton "Fouiller" du HUD Phaser — même structure que handleTowerClimbClick(). */
+async function handleTreasureDigClick(){
+  if(treasureDigInFlight) return;
+  if(creature.treasureAP <= 0) return;
+  treasureDigInFlight = true;
+  renderTreasurePanel(creature);
+  try{
+    const data = await performAction('treasure_dig', {});
+    creature = mergeDefaults(data.creature);
+    const lastDig = (creature.treasureHistory || []).slice(-1)[0];
+    playFxEffectSafe(Bridge => Bridge.playTreasureEffect({ itemFound: !!(lastDig && lastDig.itemName) }));
+    renderCreature(creature);
+  } catch(e){ console.error(e); }
+  finally {
+    treasureDigInFlight = false;
+    renderTreasurePanel(creature);
   }
 }
 
@@ -4147,6 +4223,7 @@ async function startApp(){
   playFxEffectSafe(Bridge => Bridge.preloadDungeonAssets('dungeon'));
   playFxEffectSafe(Bridge => Bridge.preloadDungeonAssets('corrupt'));
   playFxEffectSafe(Bridge => Bridge.preloadDungeonAssets('noyau'));
+  playFxEffectSafe(Bridge => Bridge.preloadTreasureAssets());
   const lb = await loadLeaderboard();
   renderLeaderboard(lb, myId);
   await renderPendingBossRewards();
@@ -4292,17 +4369,6 @@ async function startApp(){
   };
 
   // ---------- Pont Phaser — effets visuels ponctuels (Trésor/Donjons/Boss) ----------
-  $('btn-dig').onclick = async () => {
-    if(creature.treasureAP <= 0) return;
-    try{
-      const data = await performAction('treasure_dig', {});
-      creature = mergeDefaults(data.creature);
-      const lastDig = (creature.treasureHistory || []).slice(-1)[0];
-      playFxEffectSafe(Bridge => Bridge.playTreasureEffect({ itemFound: !!(lastDig && lastDig.itemName) }));
-      renderCreature(creature);
-    } catch(e){ console.error(e); }
-  };
-
   if(!window.__moltchiTreasureInterval){
     window.__moltchiTreasureInterval = setInterval(() => { if(creature && creature.stage > 0) renderTreasurePanel(creature); }, 30000);
   }
