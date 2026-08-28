@@ -828,13 +828,117 @@ document.addEventListener('click', (e) => {
 });
 
 // Tant qu'aucun Moltchi n'est actif (œuf jamais choisi, ou abandonné), seuls
-// "Comment jouer ?" et "Créature" restent accessibles.
+// "Comment jouer ?" et "Créature" restent accessibles — palier 0, absolu.
 const LOCKED_WITHOUT_CREATURE = ['training','dungeon','boss','codex','treasure','battlepass','quests','chests','shop','achievements'];
+
+// Déblocage PROGRESSIF au-delà du palier 0 (créature éclose) : chaque onglet listé ici
+// reste verrouillé tant que l'activité cumulée à VIE du joueur (voir totalPlayerActivity())
+// n'atteint pas son seuil. Objectif : éviter de déverser 10 onglets d'un coup à l'éclosion
+// (voir la conversation) — Entraînement n'est PAS dans cette liste et reste débloqué dès le
+// palier 0, puisque c'est la seule vraie source d'activité initiale (sans lui, aucun seuil
+// suivant ne pourrait jamais être atteint). Seuils volontairement bas et à ajuster selon le
+// vrai rythme de jeu observé.
+const UNLOCK_TAB_CONFIG = {
+  treasure: { threshold: 2, name: 'Chasse aux trésors', name_en: 'Treasure Hunt', icon: '⛏️',
+    desc: 'Pars à la chasse aux trésors pour gagner des Moltcoins.', desc_en: 'Go treasure hunting to earn Moltcoins.' },
+  chests: { threshold: 2, name: 'Coffres', name_en: 'Chests', icon: '🎁',
+    desc: 'Ouvre un coffre gratuit chaque jour pour des récompenses.', desc_en: 'Open a free chest every day for rewards.' },
+  dungeon: { threshold: 5, name: 'Donjons', name_en: 'Dungeons', icon: '🗼',
+    desc: 'Grimpe les étages de la Tour du Wyrm pour du butin et de l\'XP.', desc_en: 'Climb the Wyrm Tower floors for loot and XP.' },
+  codex: { threshold: 8, name: 'Recueil', name_en: 'Codex', icon: '📖',
+    desc: 'Consulte la bible du jeu : espèces, objets, formules.', desc_en: 'Browse the game bible: species, items, formulas.' },
+  achievements: { threshold: 8, name: '🏆 Succès', name_en: '🏆 Achievements', icon: '🏆',
+    desc: 'Suis tes hauts faits et débloque des récompenses.', desc_en: 'Track your achievements and unlock rewards.' },
+  quests: { threshold: 8, name: '✨ Quêtes', name_en: '✨ Quests', icon: '✨',
+    desc: 'Complète des quêtes quotidiennes et hebdomadaires.', desc_en: 'Complete daily and weekly quests.' },
+  shop: { threshold: 8, name: 'Boutique', name_en: 'Shop', icon: '🛒',
+    desc: 'Achète des objets et consommables utiles.', desc_en: 'Buy useful items and consumables.' },
+  battlepass: { threshold: 8, name: 'Pass Saisonnier', name_en: 'Season Pass', icon: '🎫',
+    desc: 'Progresse dans le Pass Saisonnier pour des récompenses.', desc_en: 'Progress the Season Pass for rewards.' },
+  boss: { threshold: 12, name: 'Boss Mondial', name_en: 'World Boss', icon: '🐙',
+    desc: 'Affronte le Boss Mondial aux côtés de tous les joueurs.', desc_en: 'Face the World Boss alongside every player.' },
+};
+
+/**
+ * Activité cumulée à VIE du joueur, tous modes confondus — sert de base au déblocage
+ * progressif ci-dessus. Aucun nouveau compteur serveur nécessaire : réutilise les stats déjà
+ * suivies par le système de hauts faits (achievements.stats.*, voir perform-action.ts), qui
+ * ne sont JAMAIS remises à zéro (contrairement à trainCounts/chestsOpened qui sont
+ * quotidiens — piège repéré avant d'implémenter, voir la conversation).
+ */
+function totalPlayerActivity(){
+  if(!achievements || !achievements.stats) return 0;
+  const s = achievements.stats;
+  return (s.trainingSessionsTotal||0) + (s.totalFloorsCleared||0) + (s.treasureDigsTotal||0);
+}
+
+/**
+ * Détecte un joueur qui a DÉJÀ une histoire de jeu, peu importe laquelle — pour ne JAMAIS
+ * reverrouiller rétroactivement un onglet chez un joueur existant. totalPlayerActivity() ne
+ * suit que 3 activités précises (entraînement/donjons/trésor) ; un joueur qui passe plutôt
+ * par le Boss, la boutique ou le chat aurait un score bas malgré une vraie ancienneté — d'où
+ * cette vérification bien plus large en complément, sur à peu près tout signal d'engagement
+ * disponible côté créature ET côté hauts faits.
+ * ⚠️ Seuils volontairement ÉLEVÉS, pas juste ">0" — le bonus de connexion du JOUR 1 donne
+ * déjà 10 Moltcoins tout seul (voir DAILY_STREAK_REWARDS_PREVIEW), une action ultra naturelle
+ * mise en avant dès l'éclosion. Un seuil ">0" ferait passer littéralement CHAQUE nouveau
+ * joueur pour "déjà établi" dès sa toute première connexion, ce qui annulerait entièrement le
+ * déblocage progressif — piège repéré avant expédition, voir la conversation.
+ */
+function hasEstablishedHistory(c){
+  if(!c) return false;
+  // ⚠️ PRINCIPE : tout signal atteignable via un contenu débloqué TÔT (Trésor/Coffres au
+  // palier 2, Donjons au palier 5) doit avoir un seuil largement AU-DESSUS du plus haut
+  // palier de déblocage (12) — sinon le court-circuit "joueur établi" se déclenche AVANT la
+  // fin de la progression normale et l'annule silencieusement (ex. quelques étages de la
+  // Tour ou quelques Moltcoins de trésor suffiraient à tout débloquer d'un coup). Seuls les
+  // signaux qui exigent DÉJÀ d'avoir légitimement débloqué le Boss (dernier palier) ou payé
+  // un vrai coût en jeu (2000 Moltcoins pour le Sanctuaire) peuvent rester bas, puisqu'ils
+  // sont naturellement protégés par une barrière antérieure. Repéré avant expédition en
+  // plusieurs passes, voir la conversation.
+  if((c.level||1) >= 10) return true;
+  if((c.moltcoins||0) >= 1000) return true;
+  if((c.inventory||[]).length >= 6) return true;
+  if((c.corruptFloor||1) > 1 || (c.noyauFloor||1) > 1) return true; // sûr : suppose déjà payé 2000 Moltcoins pour débloquer
+  if((c.contributed||0) >= 500) return true; // sûr : suppose déjà le Boss débloqué (dernier palier)
+  if((c.bestLoginStreak||0) >= 7) return true; // une semaine complète de suite, pas 2-3 jours
+  if(achievements && achievements.stats){
+    const s = achievements.stats;
+    if((s.trainingSessionsTotal||0) >= 20) return true;
+    if((s.totalFloorsCleared||0) >= 20) return true;
+    if((s.treasureDigsTotal||0) >= 20) return true;
+    if((s.bossKillsPersonal||0) >= 1) return true; // sûr : suppose déjà le Boss débloqué (dernier palier)
+    if((s.moltcoinsEarnedLifetime||0) >= 1000) return true;
+  }
+  return false;
+}
+
+// Mémoire de session : onglets déjà notifiés (pour ne jamais notifier deux fois le même
+// déblocage) + indicateur du tout premier calcul (pour ne jamais notifier rétroactivement
+// des onglets déjà débloqués avant même ce premier calcul — un joueur existant qui a déjà
+// beaucoup joué ne doit pas se prendre 5 toasts d'un coup à sa prochaine connexion).
+const _notifiedUnlockedTabs = new Set();
+let _tabAccessInitialized = false;
+
 function updateTabAccess(c){
   const hasCreature = !!(c && c.stage > 0);
+  const activity = totalPlayerActivity();
+  const established = hasEstablishedHistory(c); // joueur déjà ancien -> jamais reverrouillé, voir plus haut
+  const newlyUnlocked = [];
   document.querySelectorAll('.tab').forEach(tab=>{
-    const locked = !hasCreature && LOCKED_WITHOUT_CREATURE.includes(tab.dataset.tab);
+    const key = tab.dataset.tab;
+    const cfg = UNLOCK_TAB_CONFIG[key];
+    let locked;
+    if(!hasCreature) locked = LOCKED_WITHOUT_CREATURE.includes(key);
+    else if(cfg) locked = !established && activity < cfg.threshold;
+    else locked = false;
+
+    const wasLocked = tab.classList.contains('locked');
     tab.classList.toggle('locked', locked);
+    if(!locked){
+      if(_tabAccessInitialized && wasLocked && cfg && !_notifiedUnlockedTabs.has(key)) newlyUnlocked.push(key);
+      _notifiedUnlockedTabs.add(key); // marqué "vu" dans tous les cas — jamais de notif rétroactive
+    }
   });
   const activeTab = document.querySelector('.tab.active');
   if(activeTab && activeTab.classList.contains('locked')){
@@ -845,6 +949,29 @@ function updateTabAccess(c){
     $('panel-creature').classList.add('active');
     playFxEffectSafe(Bridge => Bridge.reclaimCreatureStage());
   }
+  _tabAccessInitialized = true;
+  if(newlyUnlocked.length) showUnlockToasts(newlyUnlocked);
+}
+
+/** Toast de déblocage d'onglet — même style/pattern que showAchievementToasts() (voir plus
+ * bas), avec en plus une courte description de ce que le mode propose. */
+function showUnlockToasts(keys){
+  const wrap = $('ach-toast-wrap');
+  if(!wrap) return;
+  keys.forEach((key, idx) => {
+    const cfg = UNLOCK_TAB_CONFIG[key];
+    if(!cfg) return;
+    setTimeout(() => {
+      const toast = document.createElement('div');
+      toast.className = 'ach-toast';
+      const name = currentLang==='en' ? cfg.name_en : cfg.name;
+      const desc = currentLang==='en' ? cfg.desc_en : cfg.desc;
+      const title = currentLang==='en' ? 'New tab unlocked' : 'Nouvel onglet débloqué';
+      toast.innerHTML = `<span class="ach-icon">${cfg.icon}</span><span><div class="ach-toast-title">🔓 ${title}</div><div class="ach-toast-name">${name}</div><div class="ach-toast-desc">${desc}</div></span>`;
+      wrap.appendChild(toast);
+      setTimeout(() => toast.remove(), 5100);
+    }, idx * 400);
+  });
 }
 
 async function getUsername(){
