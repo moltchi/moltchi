@@ -430,6 +430,13 @@
     padding:2px 8px;border:none;background:none;color:var(--ivory-dim);text-decoration:underline;
     opacity:0.85;cursor:pointer;}
   .footnote-link:hover{color:var(--gold);background:none;}
+  .music-volume-slider{width:70px;transform:rotate(-90deg);accent-color:var(--gold);cursor:pointer;}
+  @media (max-width:640px){
+    /* Horizontal (gauche→droite) sur mobile plutôt que vertical — plus naturel à manipuler
+       au doigt qu'un curseur pivoté, voir la conversation. transform:none retrouve
+       l'orientation native d'un <input type="range">. */
+    .music-volume-slider{transform:none;width:90px;}
+  }
   @media (max-width:640px){
     .footnote{padding-bottom:22px;}
     .footnote-link{right:50%;transform:translateX(50%);bottom:-18px;}
