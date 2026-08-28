@@ -217,7 +217,20 @@ function _moveCanvasTo(containerId){
     if(treasureScene && typeof treasureScene.stopTreasureHUD === 'function') treasureScene.stopTreasureHUD();
   }
   container.appendChild(_game.canvas);
-  _game.scale.resize(container.clientWidth || 300, container.clientHeight || 300);
+  const w = container.clientWidth, h = container.clientHeight;
+  if(w > 0 && h > 0){
+    _game.scale.resize(w, h);
+  } else if(_game.scale.width <= 1 || _game.scale.height <= 1){
+    // Vraiment le tout premier dimensionnement (jamais eu de vraie taille) : repli minimal
+    // pour éviter un canvas à 0×0, de toute façon écrasé dès le prochain redimensionnement
+    // correct une fois le conteneur affiché.
+    _game.scale.resize(300, 300);
+  }
+  // Sinon (mesure à 0 alors que le jeu a DÉJÀ une taille valide) : on ne touche à rien
+  // plutôt que de rétrécir visiblement pour rien — ce cas correspondait à un vrai bug
+  // (rendus Trésor/Donjons devenant minuscules après une action), corrigé à la source en
+  // dédupliquant les appels de rendu redondants côté app.js, mais ce filet de sécurité
+  // reste utile si un autre appel en rafale venait à reproduire le même problème un jour.
   return true;
 }
 
