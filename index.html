@@ -665,14 +665,17 @@
 
   <!-- SHOP PANEL -->
   <div class="panel" id="panel-shop">
-    <div class="card">
-      <h2 data-i18n="h2_shop">🏪 Boutique</h2>
-      <p data-i18n="p_shop_intro">Un objet légendaire différent de chaque donjon, en vente cette semaine seulement — un seul exemplaire achetable par joueur et par semaine, pour chacun.</p>
-      <p data-i18n="p_shop_reset" style="font-size:12px;color:var(--ivory-dim);margin-top:-8px;">Se renouvelle chaque semaine</p>
-      <div id="shop-items" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;"></div>
-      <div class="log" id="shop-log"></div>
+    <div class="shop-banner">
+      <div class="shop-banner-overlay">
+        <h2 data-i18n="h2_shop">🏪 Boutique</h2>
+        <p data-i18n="p_shop_intro">Un objet légendaire différent de chaque donjon, en vente cette semaine seulement — un seul exemplaire achetable par joueur et par semaine, pour chacun.</p>
+        <p data-i18n="p_shop_reset">Se renouvelle chaque semaine</p>
+      </div>
     </div>
-    <div class="card" id="mystery-chest-card">
+    <div id="shop-items" class="shop-cards-row"></div>
+    <div class="card"><div class="log" id="shop-log"></div></div>
+    <div class="card shop-mystery-card" id="mystery-chest-card">
+      <div class="mystery-chest-art"></div>
       <h2 data-i18n="h2_mystery_chest">🎁 Coffre Mystère</h2>
       <p data-i18n="p_mystery_chest_desc">Moltcoins garantis + chance de bonbon, d'objet (jusqu'à légendaire, tiré parmi ceux de ton donjon le plus avancé) et même de l'Éclat du Négociateur — un Moltyx exclusif, introuvable ailleurs.</p>
       <p class="attempts-left" id="mystery-chest-status" style="text-align:center;margin-top:10px;"></p>

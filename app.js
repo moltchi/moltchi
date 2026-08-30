@@ -2634,20 +2634,22 @@ function renderShopPanel(c){
     const bought = shopPurchasedThisWeek(c, entry.id);
     const canAfford = (c.moltcoins||0) >= entry.cost;
     const card = document.createElement('div');
-    card.className = 'card';
-    card.style.cssText = 'flex:1;min-width:220px;text-align:center;';
+    const isCandy = entry.id === 'candy';
+    card.className = 'card shop-item-card ' + (isCandy ? 'rarity-border-candy' : 'rarity-border-legendary');
     const lockedMsg = currentLang==='en'
       ? 'Unlock the Corrupted Sanctuary first (reach floor 100 of the Tower).'
       : 'Débloque d\'abord le Sanctuaire Corrompu (atteins l\'étage 100 de la Tour).';
     const priceLabel = discountPct > 0
       ? `<span style="text-decoration:line-through;opacity:0.55;">🪙 ${entry.baseCost}</span> 🪙 ${entry.cost} Moltcoins`
       : `🪙 ${entry.cost} Moltcoins`;
-    const isCandy = entry.id === 'candy';
     const candyName = currentLang==='en' ? (def.name_en||def.name) : def.name;
     const candyDesc = currentLang==='en' ? (def.desc_en||def.desc) : def.desc;
+    const itemLine = isCandy
+      ? `<span style="color:var(--blue);">${def.icon} ${candyName}</span>`
+      : `<span class="rarity-legendary">✨ ${def.name}</span>`;
     card.innerHTML = `
       <p style="font-size:11px;color:var(--ivory-dim);text-transform:uppercase;letter-spacing:0.04em;margin:0 0 4px;">${entry.label}</p>
-      <p style="font-weight:700;color:var(--gold);margin:0 0 6px;">${isCandy ? `${def.icon} ${candyName}` : `✨ ${def.name}`}</p>
+      <p style="font-weight:700;margin:0 0 6px;">${itemLine}</p>
       <p style="font-size:12px;color:var(--ivory-dim);margin:0 0 10px;">${isCandy ? candyDesc : statLine(def)}</p>
       ${entry.locked
         ? `<p style="font-size:12px;color:var(--danger);">${lockedMsg}</p>`

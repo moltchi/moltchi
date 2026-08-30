@@ -614,6 +614,27 @@
   .rarity-epic{color:var(--violet);}
   .rarity-legendary{color:var(--gold);}
   .rarity-unique{color:var(--ember-bright);text-shadow:0 0 6px rgba(230,120,60,0.55);font-weight:600;}
+  /* Boutique — bannière décor + cartes avec bordure/lueur par rareté (voir la conversation :
+     habillage HTML/CSS léger d'abord, migration Phaser complète seulement si insuffisant). */
+  .shop-banner{width:100%;aspect-ratio:1376/500;border-radius:14px;overflow:hidden;position:relative;
+    margin-bottom:16px;background-image:url('media/shop_banner.jpg'),linear-gradient(135deg,var(--moss-900),var(--moss-950));
+    background-size:cover,cover;background-position:center,center;}
+  .shop-banner-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
+    padding:16px 20px;background:linear-gradient(to top,rgba(10,14,9,0.92) 0%,rgba(10,14,9,0.55) 55%,rgba(10,14,9,0) 100%);}
+  .shop-banner-overlay h2{margin:0 0 6px;text-shadow:0 2px 6px rgba(0,0,0,0.6);}
+  .shop-banner-overlay p{margin:0;font-size:13px;color:var(--ivory-dim);text-shadow:0 1px 4px rgba(0,0,0,0.7);}
+  .shop-banner-overlay p[data-i18n="p_shop_reset"]{font-size:11px;margin-top:4px;opacity:0.8;}
+  .shop-cards-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
+  .shop-item-card{flex:1;min-width:220px;text-align:center;border-width:2px;border-style:solid;
+    transition:transform 0.15s ease, box-shadow 0.15s ease;}
+  .shop-item-card:hover{transform:translateY(-2px);}
+  .shop-item-card.rarity-border-legendary{border-color:var(--gold);box-shadow:0 0 14px 1px rgba(226,166,63,0.28);}
+  .shop-item-card.rarity-border-candy{border-color:var(--blue);box-shadow:0 0 14px 1px rgba(78,138,168,0.25);}
+  .shop-item-card.rarity-border-mystery{border-color:var(--violet);box-shadow:0 0 14px 1px rgba(176,111,224,0.28);}
+  .shop-mystery-card{border-width:2px;border-style:solid;border-color:var(--violet);box-shadow:0 0 14px 1px rgba(176,111,224,0.22);}
+  .mystery-chest-art{width:140px;height:140px;margin:0 auto 10px;border-radius:12px;
+    background-image:url('media/mystery_chest.jpg'),linear-gradient(135deg,var(--moss-900),var(--moss-950));
+    background-size:cover,cover;background-position:center,center;box-shadow:0 0 16px 2px rgba(176,111,224,0.3);}
   .species-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .species-card{background:var(--moss-950);border:1px solid var(--moss-700);border-radius:6px;padding:14px;text-align:center;}
   .species-card .icon{font-size:34px;}
