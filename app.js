@@ -1964,7 +1964,7 @@ const NOYAU_UNLOCK_COST = 2000; // en Moltcoins
 function noyauUnlockEligible(c){ return (c.corruptFloor||1) >= NOYAU_UNLOCK_FLOOR; }
 // Base fixe à 15 000 pour l'étage 1 du Noyau, indépendante du Sanctuaire (auparavant calée
 // sur corruptFloorRequirement(NOYAU_UNLOCK_FLOOR)). ⚠️ DOIT rester identique à perform-action.ts.
-function noyauFloorRequirement(floor){ return Math.round(15000 * Math.pow(1.03, floor - 1)); }
+function noyauFloorRequirement(floor){ return Math.round(15000 * Math.pow(1.020, floor - 1)); } // taux réduit de 1.03 à 1.022 puis 1.020, voir la conversation — DOIT rester identique à perform-action.ts
 function maxNoyauAttempts(c){ return c.species === 'Epineombre' ? 6 : 5; }
 function maxNoyauClears(c){ return c.species === 'Epineombre' ? 11 : 10; }
 function noyauXP(floor){ return 45 + floor * 3; }
