@@ -68,6 +68,9 @@ export default class DungeonScene extends Phaser.Scene {
     this._onClimbClick = null;
     this._assetsPromise = null; // chrome partagé (bouton/panneau/gemmes)
     this._bgPromises = {}; // dungeonKey -> Promise, cache anti-double-chargement du fond
+    // Même jeton de génération que TreasureScene.js (voir la conversation) — annule un
+    // appel devenu obsolète plutôt que de laisser un rendu périmé écraser le bon.
+    this._renderGen = 0;
   }
 
   create(){
@@ -96,11 +99,13 @@ export default class DungeonScene extends Phaser.Scene {
    * }} data
    */
   async showDungeonHUD(dungeonKey, data){
+    const myGen = ++this._renderGen;
     const bg = DUNGEON_BG[dungeonKey];
     await Promise.all([
       this._ensureSharedAssetsLoaded(),
       bg ? this._ensureBgLoaded(dungeonKey) : Promise.resolve(),
     ]);
+    if(myGen !== this._renderGen) return; // un appel plus récent a démarré entre-temps, on abandonne celui-ci
     if(!bg || !this.textures.exists(bg.key)) return; // fond manquant/échec, rien à afficher
 
     const { width, height } = this.scale;

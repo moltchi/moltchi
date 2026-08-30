@@ -53,6 +53,13 @@ export default class TreasureScene extends Phaser.Scene {
     this._pipImages = [];
     this._onDigClick = null;
     this._assetsPromise = null;
+    // Jeton de génération : incrémenté à chaque appel de showTreasureHUD(). Si plusieurs
+    // appels se chevauchent (ex. playFxEffectSafe fire-and-forget + cascade de
+    // renderCreature() lancés quasi simultanément côté app.js, voir la conversation), seul
+    // le PLUS RÉCENT doit réellement s'appliquer — un appel devenu obsolète pendant son
+    // propre await s'annule tout seul plutôt que d'écraser le résultat du bon avec des
+    // données/dimensions périmées.
+    this._renderGen = 0;
   }
 
   create(){
@@ -77,7 +84,9 @@ export default class TreasureScene extends Phaser.Scene {
    * }} data
    */
   async showTreasureHUD(data){
+    const myGen = ++this._renderGen;
     await this._ensureAssetsLoaded();
+    if(myGen !== this._renderGen) return; // un appel plus récent a démarré entre-temps, on abandonne celui-ci
     if(!this.textures.exists(BG_KEY)) return; // échec de chargement, rien à afficher
 
     const { width, height } = this.scale;

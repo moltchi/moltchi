@@ -96,6 +96,10 @@ export default class BossScene extends Phaser.Scene {
     this._hpFillCurrentRatio = 0;
     this._pipImages = [];
     this._onAttackClick = null;
+    // Même jeton de génération que TreasureScene.js/DungeonScene.js (voir la conversation)
+    // — annule un appel showBattleUI() devenu obsolète plutôt que de laisser un rendu
+    // périmé écraser le bon.
+    this._renderGen = 0;
   }
 
   create(){
@@ -117,6 +121,7 @@ export default class BossScene extends Phaser.Scene {
    * }} data
    */
   async showBattleUI(data){
+    const myGen = ++this._renderGen;
     const arenaBg = BOSS_ARENA_BG[data.bossId];
     // Le fond dépend du boss : on l'attend AVANT de construire l'UI (sinon _buildStaticUI
     // dessinerait sur une texture pas encore prête). Pas de repli si le fond échoue/manque
@@ -125,6 +130,7 @@ export default class BossScene extends Phaser.Scene {
       this._ensureBattleUIAssetsLoaded(),
       arenaBg ? this._ensureArenaBgLoaded(data.bossId) : Promise.resolve(),
     ]);
+    if(myGen !== this._renderGen) return; // un appel plus récent a démarré entre-temps, on abandonne celui-ci
 
     const { width, height } = this.scale;
     // Redimensionnement dynamique (fenêtre desktop redimensionnée, rotation mobile...) OU
