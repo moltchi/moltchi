@@ -83,6 +83,7 @@ export default class BossScene extends Phaser.Scene {
     this._loaded = new Set();
     this._loading = new Map();
     this._sprite = null;
+    this._spriteOutlines = [];
     this._currentBossId = null;
     this._currentKind = null;
     this._slashSprite = null;
@@ -611,6 +612,7 @@ export default class BossScene extends Phaser.Scene {
    */
   stopIdle(){
     if(this._sprite){ this._sprite.destroy(); this._sprite = null; }
+    this._destroySpriteOutline();
     if(this._slashSprite){ this._slashSprite.destroy(); this._slashSprite = null; }
     this._currentBossId = null;
     this._currentKind = null;
@@ -633,6 +635,11 @@ export default class BossScene extends Phaser.Scene {
     this._uiBuiltBossId = null;
   }
 
+  _destroySpriteOutline(){
+    this._spriteOutlines.forEach((s) => s.destroy());
+    this._spriteOutlines = [];
+  }
+
   _showBodySprite(textureKey, kind, bossId){
     const { width } = this.scale;
     const cx = width / 2;
@@ -641,28 +648,41 @@ export default class BossScene extends Phaser.Scene {
     const scale = targetSize / SPRITE_FRAME_SIZE;
 
     if(this._sprite) this._sprite.destroy();
+    this._destroySpriteOutline();
+
+    // Léger contour, UNIQUEMENT pour le Spectre des Bourrasques (voir la conversation) —
+    // ses teintes bleu-cyan se fondent trop dans son propre décor d'arène (spectre_arena.jpg,
+    // également bleuté), le rendant presque invisible. Technique par COPIES DÉCALÉES
+    // teintées en blanc (8 directions autour du personnage) plutôt que postFX.addGlow() —
+    // tenté d'abord, sans effet visible confirmé (postFX dépend du rendu WebGL, incertain
+    // selon l'appareil). Cette technique-ci ne dépend d'aucune fonctionnalité avancée du
+    // renderer, juste des sprites classiques, donc fiable partout.
+    if(bossId === 'spectre_bourrasques'){
+      const offset = Math.max(3, targetSize * 0.035);
+      const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+      this._spriteOutlines = dirs.map(([dx,dy]) => {
+        const s = this.add.sprite(cx + dx*offset, cy + dy*offset, textureKey)
+          .setOrigin(0.5).setScale(scale).setDepth(BODY_DEPTH - 0.01).setTint(0xffffff);
+        s.play(`${textureKey}_anim`);
+        return s;
+      });
+    } else {
+      this._spriteOutlines = [];
+    }
+
     this._sprite = this.add.sprite(cx, cy, textureKey).setOrigin(0.5).setScale(scale).setDepth(BODY_DEPTH);
     this._sprite.play(`${textureKey}_anim`);
     this._currentBossId = bossId;
     this._currentKind = kind;
 
-    // Léger contour lumineux, UNIQUEMENT pour le Spectre des Bourrasques (voir la
-    // conversation) — ses teintes bleu-cyan se fondent trop dans son propre décor
-    // d'arène (spectre_arena.jpg, également bleuté), le rendant presque invisible.
-    // postFX.addGlow() est un vrai effet WebGL basé sur le canal alpha du sprite, plus
-    // propre qu'un halo dessiné derrière (tenté puis retiré, ne rendait pas bien).
-    // ⚠️ distance/force calculées à partir de targetSize (PAS de valeur fixe en pixels) :
-    // le sprite est nettement plus petit en mobile (_arenaMaxSize contraint par l'espace
-    // disponible, voir _buildMobileUI) qu'en desktop — une distance fixe y paraissait donc
-    // proportionnellement bien plus faible, presque invisible. Repéré après coup, voir la
-    // conversation.
-    if(bossId === 'spectre_bourrasques' && this._sprite.postFX){
-      const glowDistance = Math.max(10, targetSize * 0.09);
-      this._sprite.postFX.addGlow(0xffffff, 8, 0, false, 0.1, glowDistance);
-    }
-
     this.tweens.killTweensOf(this._sprite);
     this.tweens.add({ targets: this._sprite, y: cy - 8, duration: 1400, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
+    // Les copies de contour suivent le même mouvement de flottement que le corps, sinon
+    // elles resteraient figées pendant que le personnage bouge.
+    if(this._spriteOutlines.length){
+      this.tweens.killTweensOf(this._spriteOutlines);
+      this.tweens.add({ targets: this._spriteOutlines, y: `-=8`, duration: 1400, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
+    }
 
     return this._sprite;
   }
