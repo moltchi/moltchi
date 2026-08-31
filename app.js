@@ -2693,11 +2693,6 @@ function renderShopPanel(c){
         const data = await performAction('shop_buy', { which });
         creature = mergeDefaults(data.creature);
         renderCreature(creature);
-        const logEl = $('shop-log');
-        const line = document.createElement('div');
-        line.textContent = (currentLang==='en' ? 'Purchased: ' : 'Acheté : ') + data.itemName;
-        logEl.prepend(line);
-        while(logEl.children.length > 10) logEl.removeChild(logEl.lastChild);
       } catch(e){
         console.error(e);
         btn.disabled = false;
