@@ -651,8 +651,14 @@ export default class BossScene extends Phaser.Scene {
     // d'arène (spectre_arena.jpg, également bleuté), le rendant presque invisible.
     // postFX.addGlow() est un vrai effet WebGL basé sur le canal alpha du sprite, plus
     // propre qu'un halo dessiné derrière (tenté puis retiré, ne rendait pas bien).
+    // ⚠️ distance/force calculées à partir de targetSize (PAS de valeur fixe en pixels) :
+    // le sprite est nettement plus petit en mobile (_arenaMaxSize contraint par l'espace
+    // disponible, voir _buildMobileUI) qu'en desktop — une distance fixe y paraissait donc
+    // proportionnellement bien plus faible, presque invisible. Repéré après coup, voir la
+    // conversation.
     if(bossId === 'spectre_bourrasques' && this._sprite.postFX){
-      this._sprite.postFX.addGlow(0xffffff, 3, 0, false, 0.1, 10);
+      const glowDistance = Math.max(6, targetSize * 0.05);
+      this._sprite.postFX.addGlow(0xffffff, 4, 0, false, 0.1, glowDistance);
     }
 
     this.tweens.killTweensOf(this._sprite);
