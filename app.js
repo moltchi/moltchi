@@ -2760,7 +2760,7 @@ $('btn-buy-mystery-chest').onclick = async () => {
     creature = mergeDefaults(data.creature);
     renderCreature(creature);
     logMysteryChestResult(data);
-    const art = document.querySelector('.mystery-chest-art');
+    const art = $('mystery-chest-card');
     if(art){
       art.classList.remove('mystery-chest-reveal'); // relance l'animation même 2 clics rapprochés
       void art.offsetWidth; // force le navigateur à repartir de zéro (retrait/ajout de classe sinon ignoré s'il arrive dans le même tick)
