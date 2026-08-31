@@ -237,7 +237,7 @@ const I18N_EN = {
   p_boss_reset_weekly: 'Resets every week. Rewards based on rank at reset time.',
   p_quests_reset_daily: 'Reset every day at midnight UTC (same slot as the World Boss). Points earned feed the Season Pass.',
   p_quests_reset_weekly: 'Reset every Monday at midnight UTC (same slot as the World Boss). Points earned feed the Season Pass.',
-  p_chests_intro: 'Open up to <strong>3 chests per day</strong> by watching a short ad. Each chest grants Moltcoins 🪙, with a chance of a consumable candy or even a very rare Moltyx.',
+  p_chests_intro: 'Open up to <strong>3 gifts per day</strong> by watching a short ad. Each gift grants Moltcoins 🪙, with a chance of a consumable candy or even a very rare Moltyx.',
   p_chests_reset: 'Reset every day',
   p_shop_intro: 'A different legendary item from each dungeon, on sale this week only — one purchase per player per week, for each.',
   p_shop_reset: 'Refreshes every week',
@@ -297,7 +297,7 @@ const I18N_EN = {
   btn_unlock_corrupt: 'Unlock — 🪙 2000 Moltcoins',
   btn_unlock_noyau: 'Unlock — 🪙 2000 Moltcoins',
   bp_premium_title: '✦ Premium Pass',
-  p_chest_adblock: '🚫 Ad blocker detected — disable it for this site (or whitelist Moltchi) to open chests.',
+  p_chest_adblock: '🚫 Ad blocker detected — disable it for this site (or whitelist Moltchi) to open gifts.',
   btn_chest_claim: '🎉 Claim reward',
   lbl_moltcoins: 'Moltcoins 🪙',
   lbl_action_points: 'Action Points',
@@ -859,7 +859,7 @@ const UNLOCK_TAB_CONFIG = {
   treasure: { threshold: 2, name: 'Chasse aux trésors', name_en: 'Treasure Hunt', icon: '⛏️',
     desc: 'Pars à la chasse aux trésors pour gagner des Moltcoins.', desc_en: 'Go treasure hunting to earn Moltcoins.' },
   chests: { threshold: 2, name: 'Cadeaux', name_en: 'Gifts', icon: '🎁',
-    desc: 'Ouvre un coffre gratuit chaque jour pour des récompenses.', desc_en: 'Open a free chest every day for rewards.' },
+    desc: 'Ouvre un cadeau gratuit chaque jour pour des récompenses.', desc_en: 'Open a free gift every day for rewards.' },
   dungeon: { threshold: 5, name: 'Donjons', name_en: 'Dungeons', icon: '🗼',
     desc: 'Grimpe les étages de la Tour du Wyrm pour du butin et de l\'XP.', desc_en: 'Climb the Wyrm Tower floors for loot and XP.' },
   codex: { threshold: 8, name: 'Recueil', name_en: 'Codex', icon: '📖',
@@ -2781,11 +2781,11 @@ function renderChestsPanel(c){
   const remaining = CHESTS_MAX_PER_DAY - opened;
   $('chests-remaining-text').textContent = remaining > 0
     ? (currentLang === 'en'
-        ? `${remaining} chest${remaining>1?'s':''} available today`
-        : `${remaining} coffre${remaining>1?'s':''} disponible${remaining>1?'s':''} aujourd'hui`)
+        ? `${remaining} gift${remaining>1?'s':''} available today`
+        : `${remaining} cadeau${remaining>1?'x':''} disponible${remaining>1?'s':''} aujourd'hui`)
     : (currentLang === 'en'
-        ? "No more chests today — come back tomorrow (midnight UTC)."
-        : "Plus de coffre aujourd'hui — reviens demain (minuit UTC).");
+        ? "No more gifts today — come back tomorrow (midnight UTC)."
+        : "Plus de cadeau aujourd'hui — reviens demain (minuit UTC).");
   const row = $('chest-row'); row.innerHTML = '';
   for(let i=0;i<CHESTS_MAX_PER_DAY;i++){
     const btn = document.createElement('button');
