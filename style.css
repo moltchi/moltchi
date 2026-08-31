@@ -632,9 +632,25 @@
   .shop-item-card.rarity-border-candy{border-color:var(--blue);box-shadow:0 0 14px 1px rgba(78,138,168,0.25);}
   .shop-item-card.rarity-border-mystery{border-color:var(--violet);box-shadow:0 0 14px 1px rgba(176,111,224,0.28);}
   .shop-mystery-card{border-width:2px;border-style:solid;border-color:var(--violet);box-shadow:0 0 14px 1px rgba(176,111,224,0.22);}
-  .mystery-chest-art{width:140px;height:140px;margin:0 auto 10px;border-radius:12px;
+  .mystery-chest-art{width:220px;height:220px;margin:0 auto 12px;border-radius:14px;
     background-image:url('media/mystery_chest.jpg'),linear-gradient(135deg,var(--moss-900),var(--moss-950));
-    background-size:cover,cover;background-position:center,center;box-shadow:0 0 16px 2px rgba(176,111,224,0.3);}
+    background-size:cover,cover;background-position:center,center;
+    box-shadow:0 0 16px 2px rgba(176,111,224,0.3);
+    animation:mysteryChestGlow 3.2s ease-in-out infinite;}
+  @keyframes mysteryChestGlow{
+    0%,100%{box-shadow:0 0 16px 2px rgba(176,111,224,0.3);}
+    50%{box-shadow:0 0 30px 6px rgba(176,111,224,0.55);}
+  }
+  /* Ajoutée brièvement en JS au clic sur "Ouvrir" (voir renderMysteryChestPanel dans
+     app.js) — léger tressaillement + flash, retirée automatiquement après l'animation. */
+  .mystery-chest-art.mystery-chest-reveal{animation:mysteryChestReveal 0.5s ease-out;}
+  @keyframes mysteryChestReveal{
+    0%{transform:scale(1);filter:brightness(1);}
+    30%{transform:scale(1.06) rotate(-2deg);filter:brightness(1.6);}
+    50%{transform:scale(1.04) rotate(2deg);filter:brightness(1.9);}
+    70%{transform:scale(1.02) rotate(-1deg);filter:brightness(1.3);}
+    100%{transform:scale(1) rotate(0);filter:brightness(1);}
+  }
   .species-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .species-card{background:var(--moss-950);border:1px solid var(--moss-700);border-radius:6px;padding:14px;text-align:center;}
   .species-card .icon{font-size:34px;}
