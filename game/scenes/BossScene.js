@@ -567,9 +567,36 @@ export default class BossScene extends Phaser.Scene {
     return this._arenaBgPromises[bossId];
   }
 
+  /**
+   * Charge une image UNE SEULE FOIS, même si plusieurs scènes la demandent en même temps —
+   * voir la version jumelle dans TreasureScene.js/DungeonScene.js pour l'explication
+   * complète du bug corrigé ici (warning "Texture key already in use" sur les gemmes,
+   * réutilisées par Trésor et les Donjons). Le verrou vit sur this.game, pas sur this,
+   * précisément pour être visible de toutes les scènes.
+   */
+  _loadImageOnce(key, path){
+    if(this.textures.exists(key)) return Promise.resolve();
+    const game = this.game;
+    if(!game._pendingImageLoads) game._pendingImageLoads = {};
+    if(game._pendingImageLoads[key]) return game._pendingImageLoads[key];
+    const promise = new Promise((resolve) => {
+      this.load.image(key, path);
+      this.load.once(`filecomplete-image-${key}`, () => { delete game._pendingImageLoads[key]; resolve(); });
+      this.load.once('loaderror', (file) => {
+        if(file.key === key){
+          console.warn(`[Moltchi/Phaser] Asset introuvable : ${path}`);
+          delete game._pendingImageLoads[key];
+          resolve();
+        }
+      });
+      this.load.start();
+    });
+    game._pendingImageLoads[key] = promise;
+    return promise;
+  }
+
   _ensureBattleUIAssetsLoaded(){
     if(this._battleUIAssetsPromise) return this._battleUIAssetsPromise;
-
     const assets = [
       [HP_FRAME_KEY, 'media/boss_hp_frame.png'],
       [LOG_PANEL_KEY, 'media/boss_log_panel.png'],
@@ -577,28 +604,7 @@ export default class BossScene extends Phaser.Scene {
       [GEM_FULL_KEY, 'media/boss_gem_full.png'],
       [GEM_EMPTY_KEY, 'media/boss_gem_empty.png'],
     ];
-    const toLoad = assets.filter(([key]) => !this.textures.exists(key));
-
-    if(toLoad.length === 0){
-      this._battleUIAssetsPromise = Promise.resolve();
-      return this._battleUIAssetsPromise;
-    }
-
-    this._battleUIAssetsPromise = new Promise((resolve) => {
-      let remaining = toLoad.length;
-      const done = () => { remaining -= 1; if(remaining <= 0) resolve(); };
-      toLoad.forEach(([key, path]) => {
-        this.load.image(key, path);
-        this.load.once(`filecomplete-image-${key}`, done);
-        this.load.once('loaderror', (file) => {
-          if(file.key === key){
-            console.warn(`[Moltchi/Phaser] Asset UI combat introuvable : ${path}`);
-            done();
-          }
-        });
-      });
-      this.load.start();
-    });
+    this._battleUIAssetsPromise = Promise.all(assets.map(([key, path]) => this._loadImageOnce(key, path)));
     return this._battleUIAssetsPromise;
   }
 

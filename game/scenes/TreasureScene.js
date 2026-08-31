@@ -243,9 +243,39 @@ export default class TreasureScene extends Phaser.Scene {
     return this._ensureAssetsLoaded();
   }
 
+  /**
+   * Charge une image UNE SEULE FOIS, même si plusieurs scènes la demandent en même temps.
+   * Le verrou vit sur `this.game` (this.game._pendingImageLoads), PAS sur `this` — car
+   * this.textures est déjà partagé entre toutes les scènes d'un même Phaser.Game, mais un
+   * cache de promesse par scène (l'ancienne méthode) ne l'était pas : deux scènes qui
+   * vérifient textures.exists(key) au même instant (avant que l'une des deux ait fini de
+   * charger) voyaient toutes les deux "pas encore chargé" et lançaient CHACUNE leur propre
+   * this.load.image(key,...) — d'où le warning navigateur "Texture key already in use"
+   * repéré en Trésor/Donjons, qui partagent le même bouton/panneau. Voir la conversation.
+   */
+  _loadImageOnce(key, path){
+    if(this.textures.exists(key)) return Promise.resolve();
+    const game = this.game;
+    if(!game._pendingImageLoads) game._pendingImageLoads = {};
+    if(game._pendingImageLoads[key]) return game._pendingImageLoads[key];
+    const promise = new Promise((resolve) => {
+      this.load.image(key, path);
+      this.load.once(`filecomplete-image-${key}`, () => { delete game._pendingImageLoads[key]; resolve(); });
+      this.load.once('loaderror', (file) => {
+        if(file.key === key){
+          console.warn(`[Moltchi/Phaser] Asset introuvable : ${path}`);
+          delete game._pendingImageLoads[key];
+          resolve();
+        }
+      });
+      this.load.start();
+    });
+    game._pendingImageLoads[key] = promise;
+    return promise;
+  }
+
   _ensureAssetsLoaded(){
     if(this._assetsPromise) return this._assetsPromise;
-
     const assets = [
       [BG_KEY, BG_PATH],
       [BUTTON_KEY, BUTTON_PATH],
@@ -253,28 +283,7 @@ export default class TreasureScene extends Phaser.Scene {
       [GEM_FULL_KEY, GEM_FULL_PATH],
       [GEM_EMPTY_KEY, GEM_EMPTY_PATH],
     ];
-    const toLoad = assets.filter(([key]) => !this.textures.exists(key));
-
-    if(toLoad.length === 0){
-      this._assetsPromise = Promise.resolve();
-      return this._assetsPromise;
-    }
-
-    this._assetsPromise = new Promise((resolve) => {
-      let remaining = toLoad.length;
-      const done = () => { remaining -= 1; if(remaining <= 0) resolve(); };
-      toLoad.forEach(([key, path]) => {
-        this.load.image(key, path);
-        this.load.once(`filecomplete-image-${key}`, done);
-        this.load.once('loaderror', (file) => {
-          if(file.key === key){
-            console.warn(`[Moltchi/Phaser] Asset Trésor introuvable : ${path}`);
-            done();
-          }
-        });
-      });
-      this.load.start();
-    });
+    this._assetsPromise = Promise.all(assets.map(([key, path]) => this._loadImageOnce(key, path)));
     return this._assetsPromise;
   }
 

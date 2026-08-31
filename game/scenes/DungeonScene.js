@@ -344,37 +344,43 @@ export default class DungeonScene extends Phaser.Scene {
     return this._bgPromises[dungeonKey];
   }
 
+  /**
+   * Charge une image UNE SEULE FOIS, même si plusieurs scènes la demandent en même temps —
+   * voir la version jumelle dans TreasureScene.js pour l'explication complète du bug corrigé
+   * ici (warning "Texture key already in use" sur le bouton/panneau partagés entre Trésor
+   * et Donjons). Le verrou vit sur this.game, pas sur this, précisément pour être visible
+   * des DEUX scènes.
+   */
+  _loadImageOnce(key, path){
+    if(this.textures.exists(key)) return Promise.resolve();
+    const game = this.game;
+    if(!game._pendingImageLoads) game._pendingImageLoads = {};
+    if(game._pendingImageLoads[key]) return game._pendingImageLoads[key];
+    const promise = new Promise((resolve) => {
+      this.load.image(key, path);
+      this.load.once(`filecomplete-image-${key}`, () => { delete game._pendingImageLoads[key]; resolve(); });
+      this.load.once('loaderror', (file) => {
+        if(file.key === key){
+          console.warn(`[Moltchi/Phaser] Asset introuvable : ${path}`);
+          delete game._pendingImageLoads[key];
+          resolve();
+        }
+      });
+      this.load.start();
+    });
+    game._pendingImageLoads[key] = promise;
+    return promise;
+  }
+
   _ensureSharedAssetsLoaded(){
     if(this._assetsPromise) return this._assetsPromise;
-
     const assets = [
       [BUTTON_KEY, BUTTON_PATH],
       [INFO_PANEL_KEY, INFO_PANEL_PATH],
       [GEM_FULL_KEY, GEM_FULL_PATH],
       [GEM_EMPTY_KEY, GEM_EMPTY_PATH],
     ];
-    const toLoad = assets.filter(([key]) => !this.textures.exists(key));
-
-    if(toLoad.length === 0){
-      this._assetsPromise = Promise.resolve();
-      return this._assetsPromise;
-    }
-
-    this._assetsPromise = new Promise((resolve) => {
-      let remaining = toLoad.length;
-      const done = () => { remaining -= 1; if(remaining <= 0) resolve(); };
-      toLoad.forEach(([key, path]) => {
-        this.load.image(key, path);
-        this.load.once(`filecomplete-image-${key}`, done);
-        this.load.once('loaderror', (file) => {
-          if(file.key === key){
-            console.warn(`[Moltchi/Phaser] Asset donjon introuvable : ${path}`);
-            done();
-          }
-        });
-      });
-      this.load.start();
-    });
+    this._assetsPromise = Promise.all(assets.map(([key, path]) => this._loadImageOnce(key, path)));
     return this._assetsPromise;
   }
 
