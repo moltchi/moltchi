@@ -83,7 +83,6 @@ export default class BossScene extends Phaser.Scene {
     this._loaded = new Set();
     this._loading = new Map();
     this._sprite = null;
-    this._bodyVignette = null;
     this._currentBossId = null;
     this._currentKind = null;
     this._slashSprite = null;
@@ -612,7 +611,6 @@ export default class BossScene extends Phaser.Scene {
    */
   stopIdle(){
     if(this._sprite){ this._sprite.destroy(); this._sprite = null; }
-    if(this._bodyVignette){ this._bodyVignette.destroy(); this._bodyVignette = null; }
     if(this._slashSprite){ this._slashSprite.destroy(); this._slashSprite = null; }
     this._currentBossId = null;
     this._currentKind = null;
@@ -635,28 +633,6 @@ export default class BossScene extends Phaser.Scene {
     this._uiBuiltBossId = null;
   }
 
-  /**
-   * Halo sombre derrière le corps du boss (cercles concentriques d'alpha décroissant, qui
-   * simulent un dégradé radial — Phaser Graphics n'a pas de fillStyle en dégradé natif).
-   * Objectif : garantir un minimum de contraste peu importe le décor d'arène en dessous —
-   * repéré sur le Spectre des Bourrasques (teintes bleu-cyan très proches du décor
-   * spectre_arena.jpg, le rendant presque invisible), mais générique pour tout futur boss
-   * dont les couleurs se rapprocheraient trop de son propre décor. Voir la conversation.
-   */
-  _ensureBodyVignette(cx, cy, size){
-    if(this._bodyVignette) this._bodyVignette.destroy();
-    const g = this.add.graphics().setDepth(BODY_DEPTH - 0.1);
-    const rings = 8;
-    for(let i = 0; i < rings; i++){
-      const t = i / (rings - 1); // 0 = centre, 1 = bord extérieur du halo
-      const r = size * 0.30 * (0.35 + t * 0.75);
-      const alpha = 0.32 * (1 - t);
-      g.fillStyle(0x0a0e08, alpha);
-      g.fillCircle(cx, cy, r);
-    }
-    this._bodyVignette = g;
-  }
-
   _showBodySprite(textureKey, kind, bossId){
     const { width } = this.scale;
     const cx = width / 2;
@@ -664,13 +640,20 @@ export default class BossScene extends Phaser.Scene {
     const targetSize = this._arenaMaxSize || Math.min(width, this.scale.height) * 0.42;
     const scale = targetSize / SPRITE_FRAME_SIZE;
 
-    this._ensureBodyVignette(cx, cy, targetSize);
-
     if(this._sprite) this._sprite.destroy();
     this._sprite = this.add.sprite(cx, cy, textureKey).setOrigin(0.5).setScale(scale).setDepth(BODY_DEPTH);
     this._sprite.play(`${textureKey}_anim`);
     this._currentBossId = bossId;
     this._currentKind = kind;
+
+    // Léger contour lumineux, UNIQUEMENT pour le Spectre des Bourrasques (voir la
+    // conversation) — ses teintes bleu-cyan se fondent trop dans son propre décor
+    // d'arène (spectre_arena.jpg, également bleuté), le rendant presque invisible.
+    // postFX.addGlow() est un vrai effet WebGL basé sur le canal alpha du sprite, plus
+    // propre qu'un halo dessiné derrière (tenté puis retiré, ne rendait pas bien).
+    if(bossId === 'spectre_bourrasques' && this._sprite.postFX){
+      this._sprite.postFX.addGlow(0xffffff, 3, 0, false, 0.1, 10);
+    }
 
     this.tweens.killTweensOf(this._sprite);
     this.tweens.add({ targets: this._sprite, y: cy - 8, duration: 1400, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
