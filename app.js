@@ -140,7 +140,7 @@ const I18N_EN = {
   tab_rewards: 'Rewards',
   tab_battlepass: 'Season Pass',
   tab_achievements: '🏆 Achievements',
-  tab_chests: 'Chests',
+  tab_chests: 'Gifts',
   tab_shop: 'Shop',
   tab_codexgroup: 'Codex',
   tab_codex: 'Compendium',
@@ -172,7 +172,7 @@ const I18N_EN = {
   h2_reward_tiers: 'Reward tiers',
   h2_achievements: '🏆 Achievements & Milestones',
   p_achievements_intro: 'Permanent accomplishments, independent from the Season Pass — they never reset, even if you abandon your Moltchi. Pick one as the title shown on your companion card.',
-  h2_chests: '🎁 Chests',
+  h2_chests: '🎁 Gifts',
   h2_shop: '🏪 Shop',
   h2_treasure_hunt: 'Treasure hunt',
   h2_lore_title: '✦ The Moltyx — bestiary legend',
@@ -858,7 +858,7 @@ const LOCKED_WITHOUT_CREATURE = ['training','dungeon','boss','codex','treasure',
 const UNLOCK_TAB_CONFIG = {
   treasure: { threshold: 2, name: 'Chasse aux trésors', name_en: 'Treasure Hunt', icon: '⛏️',
     desc: 'Pars à la chasse aux trésors pour gagner des Moltcoins.', desc_en: 'Go treasure hunting to earn Moltcoins.' },
-  chests: { threshold: 2, name: 'Coffres', name_en: 'Chests', icon: '🎁',
+  chests: { threshold: 2, name: 'Cadeaux', name_en: 'Gifts', icon: '🎁',
     desc: 'Ouvre un coffre gratuit chaque jour pour des récompenses.', desc_en: 'Open a free chest every day for rewards.' },
   dungeon: { threshold: 5, name: 'Donjons', name_en: 'Dungeons', icon: '🗼',
     desc: 'Grimpe les étages de la Tour du Wyrm pour du butin et de l\'XP.', desc_en: 'Climb the Wyrm Tower floors for loot and XP.' },
@@ -2803,7 +2803,7 @@ function renderChestsPanel(c){
   // seulement quand les 3 sont encore intacts.
   const dotHTML = '<span class="notif-dot"></span>';
   const chestsHaveAvailable = remaining > 0;
-  const chestsLabel = currentLang === 'en' ? (I18N_EN.tab_chests || 'Chests') : 'Coffres';
+  const chestsLabel = currentLang === 'en' ? (I18N_EN.tab_chests || 'Gifts') : 'Cadeaux';
   $('chests-tab').innerHTML = chestsLabel + (chestsHaveAvailable ? dotHTML : '');
 
   // Pastille combinée sur le menu parent "Récompenses" : allumée si le Pass
@@ -4134,8 +4134,8 @@ function renderCodex(c){
   const uniqueCard = $('codex-unique');
   if(uniqueCard){
     const sourceLabel = currentLang === 'en'
-      ? {treasure:'Treasure Hunt', dungeon:'Dungeons', boss:'Weekly World Boss ranking', chests:'Daily Chests', training:'Training', shop_real_money:'Real-money Shop purchase'}
-      : {treasure:'Chasse au trésor', dungeon:'Donjons', boss:'Classement hebdo du Boss Mondial', chests:'Coffres quotidiens', training:'Entraînement', shop_real_money:'Achat en argent réel (Boutique)'};
+      ? {treasure:'Treasure Hunt', dungeon:'Dungeons', boss:'Weekly World Boss ranking', chests:'Daily Gifts', training:'Training', shop_real_money:'Mystery Chest (Shop)'}
+      : {treasure:'Chasse au trésor', dungeon:'Donjons', boss:'Classement hebdo du Boss Mondial', chests:'Cadeaux quotidiens', training:'Entraînement', shop_real_money:'Coffre Mystère (Boutique)'};
     const uniqueTitle = currentLang === 'en' ? '✦ Moltyx — Unique Items' : '✦ Moltyx — Objets Uniques';
     const uniqueDesc = currentLang === 'en' ? 'Only one possible per player. Powerful, permanent effects — all equip in addition to your 5 normal items.' : 'Un seul exemplaire possible par joueur. Effets puissants et permanents — s\'équipent tous en plus des 5 objets normaux.';
     const sourceWord = currentLang === 'en' ? 'source' : 'source';
