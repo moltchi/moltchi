@@ -257,6 +257,7 @@ const I18N_EN = {
   streak_title: 'Daily Login Bonus',
   unlock_modal_title: '🔓 New unlocked!',
   unlock_modal_cta: 'Got it!',
+  boss_rewards_claimed_title: '🏆 Rewards claimed!',
   welcome_p1: 'Your Moltchi needs you: feed it, play with it, and let it rest — it all happens in the <strong>My Creature</strong> tab.',
   welcome_p2: 'To make it stronger, try the mini-games in the <strong>Training</strong> tab.',
   welcome_p3: "Dungeons, the World Boss, the shop and more await — at your own pace, whenever you're ready.",
@@ -999,6 +1000,30 @@ function showUnlockModal(keys){
 $('btn-close-unlock').onclick = () => { $('unlock-modal-overlay').style.display = 'none'; };
 $('btn-close-unlock-2').onclick = () => { $('unlock-modal-overlay').style.display = 'none'; };
 $('unlock-modal-overlay').onclick = (e) => { if(e.target.id === 'unlock-modal-overlay') $('unlock-modal-overlay').style.display = 'none'; };
+
+/**
+ * Affiche la confirmation de réclamation des récompenses hebdo du Boss Mondial dans un
+ * modal — remplace l'ancien affichage dans le journal de combat (voir la conversation),
+ * plus visible et à fermer explicitement plutôt que noyé parmi les lignes de combat.
+ */
+function showBossRewardsClaimedModal(data){
+  const overlay = $('boss-rewards-claimed-modal-overlay');
+  const body = $('boss-rewards-claimed-body');
+  if(!overlay || !body) return;
+  const xpLabel = currentLang==='en' ? 'XP gained' : 'XP gagnée';
+  const coinsLabel = currentLang==='en' ? 'Moltcoins gained' : 'Moltcoins gagnés';
+  let html = `<div class="unlock-item"><span class="unlock-item-icon">✨</span><span><div class="unlock-item-name">+${data.totalXP} ${xpLabel}</div></span></div>`;
+  html += `<div class="unlock-item"><span class="unlock-item-icon">🪙</span><span><div class="unlock-item-name">+${data.totalCoins} ${coinsLabel}</div></span></div>`;
+  if(data.moltyxWon){
+    const moltyxLabel = currentLang==='en' ? 'Shard of the World obtained!' : 'Éclat du Monde obtenu !';
+    html += `<div class="unlock-item"><span class="unlock-item-icon">✦</span><span><div class="unlock-item-name rarity-unique">${moltyxLabel}</div></span></div>`;
+  }
+  body.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+$('btn-close-boss-rewards-claimed').onclick = () => { $('boss-rewards-claimed-modal-overlay').style.display = 'none'; };
+$('btn-close-boss-rewards-claimed-2').onclick = () => { $('boss-rewards-claimed-modal-overlay').style.display = 'none'; };
+$('boss-rewards-claimed-modal-overlay').onclick = (e) => { if(e.target.id === 'boss-rewards-claimed-modal-overlay') $('boss-rewards-claimed-modal-overlay').style.display = 'none'; };
 
 async function getUsername(){
   try{ const r = await window.storage.get('username', false); return r.value; }
@@ -3229,9 +3254,7 @@ async function renderPendingBossRewards(){
       }
       creature = mergeDefaults(data.creature);
       card.style.display = 'none';
-      pushBossFightLog(currentLang==='en'
-        ? `Weekly rewards claimed: +${data.totalXP} XP, +${data.totalCoins} Moltcoins.${data.moltyxWon ? ' ✦ Eclat du Monde obtained!' : ''}`
-        : `Récompenses hebdomadaires réclamées : +${data.totalXP} XP, +${data.totalCoins} Moltcoins.${data.moltyxWon ? ' ✦ Eclat du Monde obtenu !' : ''}`);
+      showBossRewardsClaimedModal(data);
       renderCreature(creature); // appelle déjà renderBoss(boss) en fin de fonction, voir la note dans renderBoss()
     } catch(e){
       pushBossFightLog(currentLang==='en' ? 'Could not connect to the server — try again.' : 'Connexion au serveur impossible — réessaie.');
