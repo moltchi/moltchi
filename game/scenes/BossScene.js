@@ -657,8 +657,8 @@ export default class BossScene extends Phaser.Scene {
     // proportionnellement bien plus faible, presque invisible. Repéré après coup, voir la
     // conversation.
     if(bossId === 'spectre_bourrasques' && this._sprite.postFX){
-      const glowDistance = Math.max(6, targetSize * 0.05);
-      this._sprite.postFX.addGlow(0xffffff, 4, 0, false, 0.1, glowDistance);
+      const glowDistance = Math.max(10, targetSize * 0.09);
+      this._sprite.postFX.addGlow(0xffffff, 8, 0, false, 0.1, glowDistance);
     }
 
     this.tweens.killTweensOf(this._sprite);
