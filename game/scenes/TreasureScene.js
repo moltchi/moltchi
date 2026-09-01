@@ -31,8 +31,8 @@ const BG_PATH = 'media/treasure_arena.jpg';
 // le cache de textures entre toutes les scènes d'un même Game, donc aucun re-téléchargement
 // si DungeonScene les a déjà chargées. Cohérence visuelle "cadre doré pixel-art" avec le
 // reste du jeu plutôt que générer un 3e jeu de chrome pour un seul mode.
-const BUTTON_KEY = 'dungeon_climb_button';
-const BUTTON_PATH = 'media/dungeon_climb_button.png';
+const BUTTON_KEY = 'treasure_dig_button';
+const BUTTON_PATH = 'media/treasure_dig_button.png';
 const INFO_PANEL_KEY = 'dungeon_info_panel';
 const INFO_PANEL_PATH = 'media/dungeon_info_panel.png';
 const GEM_FULL_KEY = 'boss_gem_full';
@@ -162,7 +162,6 @@ export default class TreasureScene extends Phaser.Scene {
     const labelSize = fp(0.016, 8, 13);
     const moltcoinsSize = fp(0.040, 18, 30);
     const apLabelSize = fp(0.015, 7, 12);
-    const digLabelSize = fp(0.020, 9, 15);
 
     // --- Solde Moltcoins, en haut à gauche ---
     this._moltcoinsLabelText = this._track(this.add.text(16, 12, '', {
@@ -194,22 +193,20 @@ export default class TreasureScene extends Phaser.Scene {
 
     const btn = this._track(this.add.image(btnX, btnY, BUTTON_KEY).setOrigin(0).setScale(btnScale).setDepth(HUD_DEPTH + 0.2)
       .setInteractive({ useHandCursor: true }));
-    // Texte du bouton en VRAI texte Phaser dynamique (pas gravé dans l'image) — traduisible
-    // FR/EN sans regénérer d'asset, même leçon que pour les Donjons/le Boss.
-    this._digLabelText = this._track(this.add.text(btnX + btnDisplayW / 2, btnY + btnDisplayH / 2, '', {
-      fontFamily: FONT_FAMILY, fontSize: digLabelSize + 'px', color: '#fff6e6', align: 'center',
-      wordWrap: { width: btnDisplayW * 0.85 },
-    }).setOrigin(0.5).setDepth(HUD_DEPTH + 0.3));
+    // Texte "DIG" désormais gravé directement dans l'image (treasure_dig_button.png) —
+    // plus de texte Phaser dynamique par-dessus, même choix que le bouton ATTACK du Boss.
+    // ⚠️ Ce bouton n'est donc plus traduisible dynamiquement FR/EN (reste "DIG" même en
+    // français) — décision assumée, voir la conversation.
     this._digBtn = btn;
     this._digBtnScale = btnScale;
 
-    btn.on('pointerover', () => { if(!btn.getData('disabled')) this.tweens.add({ targets: [btn, this._digLabelText], scale: btnScale * 1.05, duration: 100 }); });
-    btn.on('pointerout', () => { btn.clearTint(); this.tweens.add({ targets: [btn, this._digLabelText], scale: btn.getData('disabled') ? 1 : btnScale, duration: 100 }); });
-    btn.on('pointerdown', () => { if(!btn.getData('disabled')) { btn.setTint(0xaaaaaa); this.tweens.add({ targets: [btn, this._digLabelText], scale: btnScale * 0.96, duration: 60 }); } });
+    btn.on('pointerover', () => { if(!btn.getData('disabled')) this.tweens.add({ targets: btn, scale: btnScale * 1.05, duration: 100 }); });
+    btn.on('pointerout', () => { btn.clearTint(); this.tweens.add({ targets: btn, scale: btn.getData('disabled') ? 1 : btnScale, duration: 100 }); });
+    btn.on('pointerdown', () => { if(!btn.getData('disabled')) { btn.setTint(0xaaaaaa); this.tweens.add({ targets: btn, scale: btnScale * 0.96, duration: 60 }); } });
     btn.on('pointerup', () => {
       if(btn.getData('disabled')) return;
       btn.clearTint();
-      this.tweens.add({ targets: [btn, this._digLabelText], scale: btnScale * 1.05, duration: 80 });
+      this.tweens.add({ targets: btn, scale: btnScale * 1.05, duration: 80 });
       if(this._onDigClick) this._onDigClick();
     });
 
@@ -230,11 +227,9 @@ export default class TreasureScene extends Phaser.Scene {
   }
 
   _updateDigButton(label, disabled){
-    if(this._digLabelText) this._digLabelText.setText(label || '');
     if(this._digBtn){
       this._digBtn.setData('disabled', !!disabled);
       this._digBtn.setAlpha(disabled ? 0.5 : 1);
-      this._digLabelText.setAlpha(disabled ? 0.5 : 1);
       if(disabled){ this._digBtn.disableInteractive(); } else { this._digBtn.setInteractive({ useHandCursor: true }); }
     }
   }
@@ -295,7 +290,7 @@ export default class TreasureScene extends Phaser.Scene {
     this._pipImages = [];
     this._moltcoinsLabelText = this._moltcoinsText = null;
     this._apText = null;
-    this._digBtn = this._digLabelText = null;
+    this._digBtn = null;
     this._rewardText = this._logText = null;
     this._uiBuilt = false;
   }

@@ -205,7 +205,6 @@ export default class DungeonScene extends Phaser.Scene {
     const powerLabelSize = fp(0.014, 7, 11);
     const powerValueSize = fp(0.024, 11, 18);
     const attemptsSize = fp(0.015, 7, 12);
-    const climbLabelSize = fp(0.020, 9, 15);
 
     // --- Étage courant, en haut à gauche ---
     this._floorLabelText = this._track(this.add.text(16, 12, '', {
@@ -267,23 +266,20 @@ export default class DungeonScene extends Phaser.Scene {
 
     const btn = this._track(this.add.image(btnX, btnY, BUTTON_KEY).setOrigin(0).setScale(btnScale).setDepth(HUD_DEPTH + 0.2)
       .setInteractive({ useHandCursor: true }));
-    // Texte du bouton en VRAI texte Phaser dynamique (pas gravé dans l'image, contrairement
-    // au bouton Attack du Boss dont c'était la limite connue) — traduisible FR/EN sans
-    // regénérer d'asset.
-    this._climbLabelText = this._track(this.add.text(btnX + btnDisplayW / 2, btnY + btnDisplayH / 2, '', {
-      fontFamily: FONT_FAMILY, fontSize: climbLabelSize + 'px', color: '#fff6e6', align: 'center',
-      wordWrap: { width: btnDisplayW * 0.85 },
-    }).setOrigin(0.5).setDepth(HUD_DEPTH + 0.3));
+    // Texte "CLIMB" désormais gravé directement dans l'image (dungeon_climb_button.png) —
+    // plus de texte Phaser dynamique par-dessus, même choix que le bouton ATTACK du Boss et
+    // DIG du Trésor. ⚠️ Plus traduisible dynamiquement FR/EN (reste "CLIMB" même en
+    // français) — décision assumée, voir la conversation.
     this._climbBtn = btn;
     this._climbBtnScale = btnScale;
 
-    btn.on('pointerover', () => { if(!btn.getData('disabled')) this.tweens.add({ targets: [btn, this._climbLabelText], scale: btnScale * 1.05, duration: 100 }); });
-    btn.on('pointerout', () => { btn.clearTint(); this.tweens.add({ targets: [btn, this._climbLabelText], scale: btn.getData('disabled') ? 1 : btnScale, duration: 100 }); });
-    btn.on('pointerdown', () => { if(!btn.getData('disabled')) { btn.setTint(0xaaaaaa); this.tweens.add({ targets: [btn, this._climbLabelText], scale: btnScale * 0.96, duration: 60 }); } });
+    btn.on('pointerover', () => { if(!btn.getData('disabled')) this.tweens.add({ targets: btn, scale: btnScale * 1.05, duration: 100 }); });
+    btn.on('pointerout', () => { btn.clearTint(); this.tweens.add({ targets: btn, scale: btn.getData('disabled') ? 1 : btnScale, duration: 100 }); });
+    btn.on('pointerdown', () => { if(!btn.getData('disabled')) { btn.setTint(0xaaaaaa); this.tweens.add({ targets: btn, scale: btnScale * 0.96, duration: 60 }); } });
     btn.on('pointerup', () => {
       if(btn.getData('disabled')) return;
       btn.clearTint();
-      this.tweens.add({ targets: [btn, this._climbLabelText], scale: btnScale * 1.05, duration: 80 });
+      this.tweens.add({ targets: btn, scale: btnScale * 1.05, duration: 80 });
       if(this._onClimbClick) this._onClimbClick();
     });
 
@@ -304,11 +300,9 @@ export default class DungeonScene extends Phaser.Scene {
   }
 
   _updateClimbButton(label, disabled){
-    if(this._climbLabelText) this._climbLabelText.setText(label || '');
     if(this._climbBtn){
       this._climbBtn.setData('disabled', !!disabled);
       this._climbBtn.setAlpha(disabled ? 0.5 : 1);
-      this._climbLabelText.setAlpha(disabled ? 0.5 : 1);
       if(disabled){ this._climbBtn.disableInteractive(); } else { this._climbBtn.setInteractive({ useHandCursor: true }); }
     }
   }
@@ -397,7 +391,7 @@ export default class DungeonScene extends Phaser.Scene {
     this._powerLabelText = this._powerText = null;
     this._reqLabelText = this._reqText = null;
     this._attemptsText = this._clearsText = null;
-    this._climbBtn = this._climbLabelText = null;
+    this._climbBtn = null;
     this._rewardText = this._logText = null;
     this._uiBuilt = false;
     this._uiBuiltDungeonKey = null;
