@@ -258,6 +258,7 @@ const I18N_EN = {
   unlock_modal_title: '🔓 New unlocked!',
   unlock_modal_cta: 'Got it!',
   boss_rewards_claimed_title: '🏆 Rewards claimed!',
+  mystery_chest_result_title: '🎁 Chest opened!',
   welcome_p1: 'Your Moltchi needs you: feed it, play with it, and let it rest — it all happens in the <strong>My Creature</strong> tab.',
   welcome_p2: 'To make it stronger, try the mini-games in the <strong>Training</strong> tab.',
   welcome_p3: "Dungeons, the World Boss, the shop and more await — at your own pace, whenever you're ready.",
@@ -2739,18 +2740,23 @@ function renderMysteryChestPanel(c){
 /** Affiche le résultat d'une ouverture de Coffre Mystère dans son log — factorisé pour être
  * appelé aussi bien depuis le clic manuel que depuis la réclamation automatique au retour
  * de paiement Stripe (voir handleStripeReturn()). */
-function logMysteryChestResult(data){
-  const logEl = $('mystery-chest-log');
-  const parts = [`+${data.coins} 🪙`];
-  if(data.candy) parts.push(`+1 ${data.candy.name}`);
-  (data.items||[]).forEach(it => parts.push(`${itemDisplayName(it)} (${RARITY_LABEL[it.rarity]})`));
-  if(data.uniqueFound) parts.push(`✦ ${data.uniqueFound.name} !`);
-  const line = document.createElement('div');
-  if(data.uniqueFound || (data.items && data.items.length)) line.className = 'good';
-  line.textContent = parts.join(' · ');
-  logEl.prepend(line);
-  while(logEl.children.length > 10) logEl.removeChild(logEl.lastChild);
+function showMysteryChestResultModal(data){
+  const overlay = $('mystery-chest-result-modal-overlay');
+  const body = $('mystery-chest-result-body');
+  if(!overlay || !body) return;
+  const rows = [];
+  rows.push({icon:'🪙', name: `+${data.coins} Moltcoins`});
+  if(data.candy) rows.push({icon:'🍬', name: (currentLang==='en'?'+1 ':'+1 ') + data.candy.name});
+  (data.items||[]).forEach(it => rows.push({icon:'✨', name: `${itemDisplayName(it)} (${RARITY_LABEL[it.rarity]})`, unique:false}));
+  if(data.uniqueFound) rows.push({icon:'✦', name: data.uniqueFound.name, unique:true});
+  body.innerHTML = rows.map(r =>
+    `<div class="unlock-item"><span class="unlock-item-icon">${r.icon}</span><span><div class="unlock-item-name${r.unique?' rarity-unique':''}">${r.name}</div></span></div>`
+  ).join('');
+  overlay.style.display = 'flex';
 }
+$('btn-close-mystery-chest-result').onclick = () => { $('mystery-chest-result-modal-overlay').style.display = 'none'; };
+$('btn-close-mystery-chest-result-2').onclick = () => { $('mystery-chest-result-modal-overlay').style.display = 'none'; };
+$('mystery-chest-result-modal-overlay').onclick = (e) => { if(e.target.id === 'mystery-chest-result-modal-overlay') $('mystery-chest-result-modal-overlay').style.display = 'none'; };
 
 $('btn-buy-mystery-chest').onclick = async () => {
   const btn = $('btn-buy-mystery-chest');
@@ -2759,7 +2765,7 @@ $('btn-buy-mystery-chest').onclick = async () => {
     const data = await performAction('mystery_chest_buy', {});
     creature = mergeDefaults(data.creature);
     renderCreature(creature);
-    logMysteryChestResult(data);
+    showMysteryChestResultModal(data);
     const art = $('mystery-chest-card');
     if(art){
       art.classList.remove('mystery-chest-reveal'); // relance l'animation même 2 clics rapprochés
@@ -4296,7 +4302,7 @@ async function handleStripeReturn(){
         const data = await performAction('mystery_chest_buy', {});
         creature = mergeDefaults(data.creature);
         renderCreature(creature);
-        logMysteryChestResult(data);
+        showMysteryChestResultModal(data);
         log(currentLang==='en' ? 'Payment confirmed — Mystery Chest opened!' : 'Paiement confirmé — Coffre Mystère ouvert !', 'good');
       } catch(e){ console.error(e); }
     } else {

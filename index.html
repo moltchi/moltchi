@@ -682,10 +682,25 @@
           <button id="btn-buy-mystery-chest" class="primary" data-i18n="btn_mystery_chest_buy">🎁 Ouvrir — 🪙 300 Moltcoins</button>
           <button id="btn-unlock-mystery-unlimited" data-i18n="btn_mystery_unlimited_buy">💳 Coffre payant — 0,99€</button>
         </div>
-        <div class="log" id="mystery-chest-log"></div>
       </div>
     </div>
   </div>
+
+  <!-- Modal de résultat d'ouverture du Coffre Mystère — même style que les autres modals
+       (bienvenue, déblocage, récompenses Boss). Remplace l'ancien journal dans la carte,
+       devenu invisible/coupé depuis le passage à la carte en plein fond (voir la
+       conversation). Contenu injecté par showMysteryChestResultModal() dans app.js. -->
+  <div id="mystery-chest-result-modal-overlay" class="terms-modal-overlay" style="display:none;">
+    <div class="terms-modal">
+      <button id="btn-close-mystery-chest-result" class="terms-modal-close">✕</button>
+      <div class="terms-modal-content" style="text-align:center;">
+        <h2 data-i18n="mystery_chest_result_title">🎁 Coffre ouvert !</h2>
+        <div id="mystery-chest-result-body" style="margin-top:14px;text-align:left;"></div>
+        <button id="btn-close-mystery-chest-result-2" class="primary streak-claim-btn" data-i18n="unlock_modal_cta" style="margin-top:10px;">C'est noté !</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- TREASURE HUNT PANEL -->
   <div class="panel" id="panel-treasure">

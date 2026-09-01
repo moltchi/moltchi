@@ -632,7 +632,7 @@
   .shop-item-card.rarity-border-candy{border-color:var(--blue);box-shadow:0 0 14px 1px rgba(78,138,168,0.25);}
   .shop-item-card.rarity-border-mystery{border-color:var(--violet);box-shadow:0 0 14px 1px rgba(176,111,224,0.28);}
   .shop-mystery-card{border-width:2px;border-style:solid;border-color:var(--violet);
-    border-radius:14px;overflow:hidden;position:relative;min-height:340px;
+    border-radius:14px;overflow:hidden;position:relative;
     background-image:url('media/mystery_chest.jpg'),linear-gradient(135deg,var(--moss-900),var(--moss-950));
     background-size:cover,cover;background-position:center 30%,center;
     animation:mysteryChestGlow 3.2s ease-in-out infinite;}
@@ -640,7 +640,13 @@
     0%,100%{box-shadow:0 0 14px 1px rgba(176,111,224,0.22);}
     50%{box-shadow:0 0 30px 6px rgba(176,111,224,0.5);}
   }
-  .mystery-chest-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
+  /* En flux normal (PAS position:absolute/inset:0) : un élément en position absolue ne
+     compte pas dans la hauteur de son parent, donc la carte restait bloquée à 340px même
+     si le texte avait besoin de plus de place (titre poussé hors de la zone visible et
+     coupé sur mobile, où le texte s'enroule sur plus de lignes) — voir la conversation.
+     min-height ici (pas sur la carte) garantit quand même une belle hauteur minimale pour
+     bien montrer le décor quand le contenu est court. */
+  .mystery-chest-overlay{min-height:340px;display:flex;flex-direction:column;justify-content:flex-end;
     padding:16px 18px;background:linear-gradient(to top,rgba(10,6,16,0.94) 0%,rgba(10,6,16,0.75) 45%,rgba(10,6,16,0.15) 80%,rgba(10,6,16,0) 100%);}
   .mystery-chest-overlay h2{margin:0 0 6px;text-shadow:0 2px 6px rgba(0,0,0,0.7);}
   .mystery-chest-overlay p{text-shadow:0 1px 4px rgba(0,0,0,0.8);}
