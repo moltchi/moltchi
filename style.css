@@ -6,6 +6,7 @@
     --ivory:#f3ead6; --ivory-dim:#c9b8de;
     --ember:#c8622f; --ember-bright:#e88a4a;
     --gold:#e2a63f; --gold-bright:#ffce6e; --danger:#7a2b2b; --blue:#4e8aa8; --violet:#b06fe0; --sparkle:#e07ee0;
+    --earth:#7a9450; --earth-bright:#a3c47a;
     --font-display:'Iowan Old Style','Palatino Linotype',Georgia,serif;
     --font-body:'Avenir Next',Verdana,sans-serif;
     --font-mono:'Courier New',monospace;
@@ -662,12 +663,35 @@
     100%{transform:scale(1) rotate(0);filter:brightness(1);}
   }
   .species-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .species-card{background:var(--moss-950);border:1px solid var(--moss-700);border-radius:6px;padding:14px;text-align:center;}
+  .species-card{position:relative;overflow:hidden;border:2px solid var(--moss-700);border-radius:6px;
+    background-size:cover;background-position:center;background-color:var(--moss-950);
+    transition:transform 0.15s ease;}
+  .species-card:hover{transform:translateY(-2px);}
+  /* Overlay à dégradé (sombre en bas, transparent en haut) — garde le texte lisible
+     par-dessus le décor propre à chaque élément, même principe que la boutique. */
+  .species-card-overlay{position:relative;padding:14px;text-align:center;
+    background:linear-gradient(to bottom, rgba(10,6,16,0.1) 0%, rgba(10,6,16,0.65) 55%, rgba(10,6,16,0.92) 100%);}
   .species-card .icon{font-size:34px;}
-  .species-card .portrait{width:96px;height:96px;object-fit:cover;border-radius:50%;border:2px solid var(--moss-700);margin:0 auto 6px;display:block;background:var(--moss-900);}
-  .species-card .name{font-family:var(--font-display);font-size:16px;margin:6px 0 2px;color:var(--ivory);}
-  .species-card .passive{font-family:var(--font-mono);font-size:10px;color:var(--gold);margin-bottom:4px;}
-  .species-card .talent{font-family:var(--font-mono);font-size:10px;color:var(--ivory-dim);margin-bottom:10px;min-height:32px;}
+  .species-card .portrait{width:140px;height:140px;object-fit:cover;border-radius:50%;border:2px solid var(--moss-700);margin:0 auto 8px;display:block;background:var(--moss-900);}
+  .species-card .name{font-family:var(--font-display);font-size:16px;margin:6px 0 2px;color:var(--ivory);text-shadow:0 2px 6px rgba(0,0,0,0.7);}
+  .species-card .passive{font-family:var(--font-mono);font-size:10px;color:var(--gold);margin-bottom:4px;text-shadow:0 1px 4px rgba(0,0,0,0.8);}
+  .species-card .talent{font-family:var(--font-mono);font-size:10px;color:var(--ivory-dim);margin-bottom:10px;min-height:32px;text-shadow:0 1px 4px rgba(0,0,0,0.8);}
+  /* Code couleur par élément (voir la conversation) — chaque espèce représente un élément
+     distinct (Feu/Terre/Eau/Vent), même principe que le code couleur par rareté déjà utilisé
+     ailleurs (Recueil, cartes boutique). Bordure + lueur assortie, portrait assorti aussi,
+     + décor dédié par élément (dégradé de repli si l'image n'est pas là). */
+  .species-card.element-fire{border-color:var(--ember-bright);box-shadow:0 0 14px 1px rgba(200,98,47,0.3);
+    background-image:url('media/species_bg_braisien.jpg'),linear-gradient(135deg,#3a1a10,var(--moss-950));}
+  .species-card.element-fire .portrait{border-color:var(--ember-bright);}
+  .species-card.element-earth{border-color:var(--earth-bright);box-shadow:0 0 14px 1px rgba(122,148,80,0.3);
+    background-image:url('media/species_bg_ptimousse.jpg'),linear-gradient(135deg,#243a1a,var(--moss-950));}
+  .species-card.element-earth .portrait{border-color:var(--earth-bright);}
+  .species-card.element-water{border-color:var(--blue);box-shadow:0 0 14px 1px rgba(78,138,168,0.3);
+    background-image:url('media/species_bg_luminel.jpg'),linear-gradient(135deg,#123244,var(--moss-950));}
+  .species-card.element-water .portrait{border-color:var(--blue);}
+  .species-card.element-wind{border-color:var(--violet);box-shadow:0 0 14px 1px rgba(176,111,224,0.3);
+    background-image:url('media/species_bg_epineombre.jpg'),linear-gradient(135deg,#2c1a44,var(--moss-950));}
+  .species-card.element-wind .portrait{border-color:var(--violet);}
   table.howto{width:100%;border-collapse:collapse;margin:10px 0 16px;}
   table.howto th, table.howto td{font-size:12px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--moss-700);}
   table.howto th{font-family:var(--font-mono);color:var(--gold);text-transform:uppercase;font-size:10px;}

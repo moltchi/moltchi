@@ -2264,9 +2264,10 @@ async function sendChatMessage(){
 function renderSpeciesSelect(){
   const grid = $('species-grid');
   grid.innerHTML = '';
+  const ELEMENT_CLASS = { Braisien: 'element-fire', Ptimousse: 'element-earth', Luminel: 'element-water', Epineombre: 'element-wind' };
   Object.entries(SPECIES).forEach(([key,sp])=>{
     const card = document.createElement('div');
-    card.className = 'species-card';
+    card.className = 'species-card ' + (ELEMENT_CLASS[key] || '');
     const iconHtml = sp.video
       ? `<video class="portrait" src="${sp.video}" autoplay loop muted playsinline onerror="this.outerHTML='<div class=&quot;icon&quot;>${sp.icon}</div>';"></video>`
       : sp.image
@@ -2275,7 +2276,7 @@ function renderSpeciesSelect(){
     const passiveLabel = currentLang === 'en' ? (sp.passiveLabel_en || sp.passiveLabel) : sp.passiveLabel;
     const talent = currentLang === 'en' ? (sp.talent_en || sp.talent) : sp.talent;
     const chooseLabel = currentLang === 'en' ? 'Choose' : 'Choisir';
-    card.innerHTML = `${iconHtml}<div class="name">${sp.name}</div><div class="passive">${passiveLabel}</div><div class="talent">${talent}</div><button class="primary" data-species="${key}">${chooseLabel}</button>`;
+    card.innerHTML = `<div class="species-card-overlay">${iconHtml}<div class="name">${sp.name}</div><div class="passive">${passiveLabel}</div><div class="talent">${talent}</div><button class="primary" data-species="${key}">${chooseLabel}</button></div>`;
     grid.appendChild(card);
     // L'attribut autoplay seul n'est pas fiable pour une vidéo insérée via innerHTML
     // sur mobile (surtout iOS Safari) : on force explicitement la lecture en JS.
